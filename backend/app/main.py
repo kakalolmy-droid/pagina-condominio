@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from app.models import *  # noqa
 from app.database import Base, engine, SessionLocal
 from app.auth.jwt_handler import hash_password
-from app.models.usuario import Usuario, RolEnum
+from app.models.usuario import Usuario
 from app.models.apartamento import Apartamento
 from app.models.tasa_bcv import TasaBCV
 from datetime import date
@@ -28,10 +28,8 @@ def auto_seed_database():
                 nombre="Administrador",
                 apellido="Principal",
                 cedula="V-00000001",
-                telefono="+584120000000",
                 telefono_whatsapp="+584120000000",
-                rol=RolEnum.ADMIN,
-                activo=True,
+                rol="admin",
             )
             db.add(admin)
 
@@ -42,10 +40,8 @@ def auto_seed_database():
                 nombre="Cesar",
                 apellido="Farias",
                 cedula="V-12345678",
-                telefono="+584127040138",
                 telefono_whatsapp="+584127040138",
-                rol=RolEnum.PROPIETARIO,
-                activo=True,
+                rol="propietario",
             )
             lormy = Usuario(
                 email="lormym48@gmail.com",
@@ -53,10 +49,8 @@ def auto_seed_database():
                 nombre="Lormy",
                 apellido="Moreno",
                 cedula="V-87654321",
-                telefono="+584226410044",
                 telefono_whatsapp="+584226410044",
-                rol=RolEnum.PROPIETARIO,
-                activo=True,
+                rol="propietario",
             )
             db.add_all([cesar, lormy])
             db.commit()
