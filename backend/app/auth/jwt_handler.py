@@ -15,6 +15,11 @@ def hashear_password(password: str) -> str:
     return bcrypt.hashpw(pwd_bytes, salt).decode('utf-8')
 
 
+def hash_password(password: str) -> str:
+    """Alias en inglés para compatibilidad."""
+    return hashear_password(password)
+
+
 def verificar_password(password_plano: str, password_hasheado: str) -> bool:
     """Verifica si la contraseña coincide con el hash."""
     try:
@@ -23,6 +28,11 @@ def verificar_password(password_plano: str, password_hasheado: str) -> bool:
         return bcrypt.checkpw(pwd_bytes, hash_bytes)
     except Exception:
         return False
+
+
+def verify_password(password_plano: str, password_hasheado: str) -> bool:
+    """Alias en inglés para compatibilidad."""
+    return verificar_password(password_plano, password_hasheado)
 
 
 def crear_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
