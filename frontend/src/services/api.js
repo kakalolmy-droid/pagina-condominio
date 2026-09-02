@@ -1,11 +1,11 @@
 import axios from 'axios'
 
-// Detecta automáticamente si está corriendo en Vercel o en Localhost
+// Detecta automáticamente la URL del backend según el entorno
 const getBaseURL = () => {
-  if (import.meta.env.VITE_API_URL) {
-    return `${import.meta.env.VITE_API_URL}/api`
+  const envUrl = import.meta.env.VITE_API_URL
+  if (envUrl) {
+    return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`
   }
-  // Si está en producción en Vercel o similar
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
     return 'https://alcatraz-api.onrender.com/api'
   }
@@ -18,6 +18,15 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+})
+
+// Interceptor para inyectar el Bearer Token en todas las peticiones
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
 })
 
 // Interceptor de respuesta: maneja errores 401 globalmente EXCEPTO en login
