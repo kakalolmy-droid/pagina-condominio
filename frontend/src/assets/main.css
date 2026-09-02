@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-neu-bg text-neu-text font-sans antialiased selection:bg-neu-green selection:text-white;
+  }
+
+  * {
+    @apply box-border;
+  }
+}
+
+@layer components {
+  /* ── Botones Neumórficos ─────────────────────────────── */
+  .btn-neu {
+    @apply bg-neu-bg shadow-neu rounded-neu-md px-6 py-3.5 font-semibold
+           text-neu-green transition-all duration-200 active:shadow-neu-pressed
+           hover:text-neu-green-light hover:shadow-neu-sm cursor-pointer select-none inline-flex items-center justify-center gap-2;
+  }
+
+  .btn-neu-primary {
+    @apply bg-neu-green text-white shadow-neu-sm rounded-neu-md px-6 py-3.5
+           font-bold transition-all duration-200 active:shadow-neu-pressed
+           hover:bg-neu-green-light hover:shadow-neu-glow cursor-pointer select-none inline-flex items-center justify-center gap-2;
+  }
+
+  .btn-neu-danger {
+    @apply bg-neu-danger text-white shadow-neu-sm rounded-neu-md px-6 py-3.5
+           font-bold transition-all duration-200 active:shadow-neu-pressed
+           hover:opacity-95 cursor-pointer select-none inline-flex items-center justify-center gap-2;
+  }
+
+  /* ── Tarjetas Neumórficas Suaves ────────────────────────────── */
+  .card-neu {
+    @apply bg-neu-bg-card shadow-neu rounded-neu p-7 border border-white/60 transition-all duration-200;
+  }
+
+  .card-neu-sm {
+    @apply bg-neu-bg-card shadow-neu-sm rounded-neu-md p-5 border border-white/50;
+  }
+
+  /* ── Input Neumórfico (Efecto cóncavo / hundido suave) ───────── */
+  .input-neu {
+    @apply bg-neu-bg-dark shadow-neu-inset rounded-neu-sm px-4 py-3.5 w-full
+           text-neu-text placeholder-neu-text-light/60 outline-none
+           border border-transparent focus:border-neu-green/40 focus:ring-2 focus:ring-neu-green/20 transition-all duration-200;
+  }
+
+  /* ── Badges e Insignias Neumórficas ────────────────────────── */
+  .badge-success {
+    @apply bg-neu-success text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-sm;
+  }
+
+  .badge-danger {
+    @apply bg-neu-danger text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-sm;
+  }
+
+  .badge-warning {
+    @apply bg-neu-warning text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-sm;
+  }
+
+  .badge-info {
+    @apply bg-neu-info text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-sm;
+  }
+}

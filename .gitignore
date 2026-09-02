@@ -1,0 +1,25 @@
+# Dependencias Node
+node_modules/
+dist/
+.vite/
+
+# Python & Entornos
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# WhatsApp Auth Session (no subir sesión privada)
+whatsapp_service/auth_info_baileys/
+auth_info_baileys/
+
+# Logs & Temporales
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

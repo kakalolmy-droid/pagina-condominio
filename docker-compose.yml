@@ -1,0 +1,115 @@
+# ================================================================
+#  Edificio Alcatraz — Docker Compose
+# ================================================================
+
+services:
+
+  # ─── BASE DE DATOS POSTGRESQL ─────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: alcatraz_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: alcatraz
+      POSTGRES_USER: alcatraz_user
+      POSTGRES_PASSWORD: alcatraz_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alcatraz_user -d alcatraz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - alcatraz_net
+
+  # ─── REDIS ───────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: alcatraz_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - alcatraz_net
+
+  # ─── MICROSERVICIO BOT DE WHATSAPP AUTÓNOMO ────────────────────
+  whatsapp:
+    build:
+      context: ./whatsapp_service
+      dockerfile: Dockerfile
+    container_name: alcatraz_whatsapp
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - whatsapp_auth:/app/auth_info_baileys
+    networks:
+      - alcatraz_net
+
+  # ─── BACKEND FASTAPI ──────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: alcatraz_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://alcatraz_user:alcatraz_pass@db:5432/alcatraz
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: clave-secreta-super-segura-edificio-alcatraz-2026
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 480
+      CLOUDINARY_CLOUD_NAME: demo-alcatraz
+      CLOUDINARY_API_KEY: 123456789012345
+      CLOUDINARY_API_SECRET: abcdefghijklmnopqrstuvwxyz1234
+      CONDOMINIO_NOMBRE: Edificio Alcatraz
+      CONDOMINIO_PORTAL_URL: http://localhost:5173
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - alcatraz_net
+
+  # ─── FRONTEND VUE 3 (Nginx en Docker) ─────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: alcatraz_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - alcatraz_net
+
+volumes:
+  postgres_data:
+    name: alcatraz_postgres_data
+  redis_data:
+    name: alcatraz_redis_data
+  whatsapp_auth:
+    name: alcatraz_whatsapp_auth
+
+networks:
+  alcatraz_net:
+    name: alcatraz_network
+    driver: bridge
