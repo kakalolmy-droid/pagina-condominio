@@ -1,9 +1,20 @@
 import axios from 'axios'
 
-// Usar ruta directa al backend en localhost:8000 para desarrollo
+// Detecta automáticamente si está corriendo en Vercel o en Localhost
+const getBaseURL = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return `${import.meta.env.VITE_API_URL}/api`
+  }
+  // Si está en producción en Vercel o similar
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return 'https://alcatraz-api.onrender.com/api'
+  }
+  return 'http://localhost:8000/api'
+}
+
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
-  timeout: 15000,
+  baseURL: getBaseURL(),
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
