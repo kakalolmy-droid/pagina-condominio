@@ -2,15 +2,97 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.models import *  # noqa
+from app.database import Base, engine, SessionLocal
+from app.auth.jwt_handler import hash_password
+from app.models.usuario import Usuario, RolEnum
+from app.models.apartamento import Apartamento
+from app.models.tasa_bcv import TasaBCV
+from datetime import date
+from decimal import Decimal
 from app.routers import auth, tasa, usuarios, apartamentos, recibos, pagos, conciliacion, reportes, whatsapp_bot
 from app.config import get_settings
 
 settings = get_settings()
 
 
+def auto_seed_database():
+    """Auto-inicializa tablas y datos de prueba si la base de datos está vacía (Cloud / Render)."""
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        admin = db.query(Usuario).filter(Usuario.email == "admin@alcatraz.com").first()
+        if not admin:
+            admin = Usuario(
+                email="admin@alcatraz.com",
+                password_hash=hash_password("admin123"),
+                nombre="Administrador",
+                apellido="Principal",
+                cedula="V-00000001",
+                telefono="+584120000000",
+                telefono_whatsapp="+584120000000",
+                rol=RolEnum.ADMIN,
+                activo=True,
+            )
+            db.add(admin)
+
+            # Propietarios
+            cesar = Usuario(
+                email="fariascba@gmail.com",
+                password_hash=hash_password("admin123"),
+                nombre="Cesar",
+                apellido="Farias",
+                cedula="V-12345678",
+                telefono="+584127040138",
+                telefono_whatsapp="+584127040138",
+                rol=RolEnum.PROPIETARIO,
+                activo=True,
+            )
+            lormy = Usuario(
+                email="lormym48@gmail.com",
+                password_hash=hash_password("admin123"),
+                nombre="Lormy",
+                apellido="Moreno",
+                cedula="V-87654321",
+                telefono="+584226410044",
+                telefono_whatsapp="+584226410044",
+                rol=RolEnum.PROPIETARIO,
+                activo=True,
+            )
+            db.add_all([cesar, lormy])
+            db.commit()
+
+            # Apartamentos
+            apto1 = Apartamento(
+                numero_apto="2-6",
+                piso=2,
+                torre="A",
+                alicuota=Decimal("0.0500"),
+                propietario_id=cesar.id,
+            )
+            apto2 = Apartamento(
+                numero_apto="2-5",
+                piso=2,
+                torre="A",
+                alicuota=Decimal("0.0500"),
+                propietario_id=lormy.id,
+            )
+            db.add_all([apto1, apto2])
+
+            # Tasa
+            tasa_ini = TasaBCV(fecha=date.today(), tasa_usd_ves=Decimal("798.326"))
+            db.add(tasa_ini)
+            db.commit()
+            print("🌱 Base de datos auto-inicializada con usuarios de prueba en la nube.")
+    except Exception as e:
+        print(f"Nota en auto_seed: {e}")
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print(f"🏢 {settings.condominio_nombre} — API iniciada")
+    auto_seed_database()
+    print(f"🏢 {settings.condominio_nombre} — API iniciada con éxito en Render")
     yield
     print("🛑 API detenida")
 
@@ -24,7 +106,7 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# ─── CORS Total (Permite cualquier origen para entorno de desarrollo) ──
+# ─── CORS Total ──────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,7 +115,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ─── ROUTERS — Un archivo por módulo ──────────────────────────────
+# ─── ROUTERS ─────────────────────────────────────────────────────
 app.include_router(auth.router)           # /api/auth/
 app.include_router(tasa.router)           # /api/tasa/
 app.include_router(usuarios.router)       # /api/usuarios/
@@ -57,5 +139,4 @@ async def root():
 
 @app.get("/health", tags=["Health"])
 async def health_check():
-    """Endpoint de salud para Koyeb y Docker healthcheck."""
     return {"status": "ok"}
