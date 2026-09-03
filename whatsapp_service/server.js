@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const QRCode = require('qrcode');
+const http = require('http');
 const {
     default: makeWASocket,
     useMultiFileAuthState,
@@ -13,7 +14,8 @@ const fs = require('fs');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 let sock = null;
 let qrCodeImage = null;
@@ -47,7 +49,7 @@ async function connectToWhatsApp() {
 
             if (qr) {
                 try {
-                    // Genera imagen QR nítida en tiempo real
+                    // Genera imagen QR nítida en base64 en tiempo real
                     qrCodeImage = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
                     isConnected = false;
                     console.log('📱 Nuevo código QR Baileys generado.');
@@ -93,10 +95,10 @@ async function connectToWhatsApp() {
 // Iniciar conexión al levantar el servicio
 connectToWhatsApp();
 
-// ── Endpoints REST para FastAPI y Vue ──
+// ── Endpoints de WhatsApp (Soportando llamadas directas y con prefijo /api/whatsapp-bot) ──
 
-// Estado actual y QR
-app.get('/status', (req, res) => {
+// 1. Estado y QR
+app.get(['/status', '/api/whatsapp-bot/status'], (req, res) => {
     res.json({
         connected: isConnected,
         qr: qrCodeImage,
@@ -104,8 +106,22 @@ app.get('/status', (req, res) => {
     });
 });
 
-// Vincular por Código de 8 Dígitos (Pairing Code)
-app.post('/request-pairing-code', async (req, res) => {
+// 2. Refrescar QR
+app.post(['/refresh-qr', '/api/whatsapp-bot/refresh-qr'], async (req, res) => {
+    try {
+        if (sock) {
+            try { sock.end(); } catch (e) {}
+        }
+        qrCodeImage = null;
+        setTimeout(connectToWhatsApp, 500);
+        res.json({ status: 'ok', message: 'Regenerando código QR...' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 3. Vincular por Código de 8 Dígitos (Pairing Code)
+app.post(['/request-pairing-code', '/api/whatsapp-bot/request-pairing-code'], async (req, res) => {
     const { phone } = req.body;
     if (!phone) {
         return res.status(400).json({ error: 'Número de teléfono requerido' });
@@ -126,8 +142,8 @@ app.post('/request-pairing-code', async (req, res) => {
     }
 });
 
-// Desconectar / Cerrar sesión para cambiar de número o limpiar sesión
-app.post('/logout', async (req, res) => {
+// 4. Desconectar / Cerrar sesión
+app.post(['/logout', '/api/whatsapp-bot/logout'], async (req, res) => {
     try {
         if (sock) {
             try { await sock.logout(); } catch (e) {}
@@ -139,28 +155,14 @@ app.post('/logout', async (req, res) => {
             fs.rmSync('auth_info_baileys', { recursive: true, force: true });
         } catch (e) {}
         setTimeout(connectToWhatsApp, 1000);
-        res.json({ status: 'ok', message: 'Sesión de WhatsApp reseteada. Generando nuevo código QR...' });
+        res.json({ status: 'ok', message: 'Sesión de WhatsApp reseteada.' });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
 
-// Endpoint para solicitar nuevo QR forzadamente
-app.post('/refresh-qr', async (req, res) => {
-    try {
-        if (sock) {
-            try { sock.end(); } catch (e) {}
-        }
-        qrCodeImage = null;
-        setTimeout(connectToWhatsApp, 500);
-        res.json({ status: 'ok', message: 'Regenerando código QR...' });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-// Envío de mensaje individual
-app.post('/send-message', async (req, res) => {
+// 5. Envío de mensaje individual
+app.post(['/send-message', '/api/whatsapp-bot/send-message'], async (req, res) => {
     const { phone, message } = req.body;
     if (!isConnected || !sock) {
         return res.status(400).json({ error: 'WhatsApp no está vinculado. Escanea el código QR primero.' });
@@ -178,6 +180,43 @@ app.post('/send-message', async (req, res) => {
         console.error('Error al enviar mensaje:', error);
         res.status(500).json({ error: error.message });
     }
+});
+
+// ── Proxy transparente a FastAPI (puerto 8000) para todas las demás rutas de la aplicación ──
+function proxyToFastAPI(req, res) {
+    const targetPath = req.originalUrl || req.url;
+    const options = {
+        hostname: '127.0.0.1',
+        port: 8000,
+        path: targetPath,
+        method: req.method,
+        headers: {
+            ...req.headers,
+            host: '127.0.0.1:8000'
+        }
+    };
+
+    const proxyReq = http.request(options, (proxyRes) => {
+        res.writeHead(proxyRes.statusCode, proxyRes.headers);
+        proxyRes.pipe(res, { end: true });
+    });
+
+    proxyReq.on('error', (err) => {
+        console.error('FastAPI proxy error:', err.message);
+        res.status(503).json({ detail: 'Servidor iniciando en Render, reintentando...' });
+    });
+
+    if (req.body && Object.keys(req.body).length > 0) {
+        const bodyData = JSON.stringify(req.body);
+        proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+        proxyReq.setHeader('Content-Type', 'application/json');
+        proxyReq.write(bodyData);
+    }
+    proxyReq.end();
+}
+
+app.use((req, res) => {
+    proxyToFastAPI(req, res);
 });
 
 const PORT = 3000;
