@@ -69,8 +69,7 @@ async def enviar_masivo_automatico(
     portal_url = "https://pagina-condominio.vercel.app/mi-cuenta/pagar"
 
     aptos = db.query(Apartamento).filter(
-        Apartamento.propietario_id != None,
-        Apartamento.activo == True
+        Apartamento.propietario_id != None
     ).all()
     
     enviados_exitosos = []
@@ -78,8 +77,15 @@ async def enviar_masivo_automatico(
 
     async with httpx.AsyncClient(timeout=15.0) as client:
         for apto in aptos:
+            # 1. Comprobación estricta de que el apartamento esté activo
+            if not apto.activo or apto.activo in (0, "0", False, "false"):
+                logger.info(f"Omitiendo Apto {apto.numero_apto}: apartamento desactivado.")
+                continue
+
+            # 2. Comprobación estricta de que el propietario esté activo y tenga teléfono
             p = apto.propietario
-            if not p or not p.activo or not p.telefono_whatsapp:
+            if not p or not p.activo or p.activo in (0, "0", False, "false") or not p.telefono_whatsapp:
+                logger.info(f"Omitiendo Apto {apto.numero_apto}: propietario desactivado o sin teléfono.")
                 continue
 
             cuota_mes = float(apto.alicuota or 15.00)

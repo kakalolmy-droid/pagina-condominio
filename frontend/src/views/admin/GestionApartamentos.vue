@@ -303,6 +303,16 @@ onMounted(async () => {
     aptosStore.cargar(),
     usuariosStore.cargar(),
   ])
+
+  // Asegurar persistencia en el backend Render de cualquier apartamento desactivado previamente
+  for (const a of (aptosStore.lista || [])) {
+    if (estaInactivo(a.id, a.propietario_id) && a.activo) {
+      apartamentosService.actualizar(a.id, { activo: false }).catch(() => {})
+      if (a.propietario_id) {
+        usuariosService.actualizar(a.propietario_id, { activo: false }).catch(() => {})
+      }
+    }
+  }
 })
 
 function abrirModalCrear() {
@@ -352,7 +362,11 @@ async function alternarEstado(apto) {
     if (apto.propietario_id) {
       await usuariosService.actualizar(apto.propietario_id, { activo: !nuevoEstadoInactivo })
     }
-  } catch (e) {}
+    await aptosStore.cargar()
+    await usuariosStore.cargar()
+  } catch (e) {
+    console.error('Error sincronizando estado:', e)
+  }
 }
 
 async function guardarApartamento() {

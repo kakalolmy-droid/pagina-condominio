@@ -250,6 +250,17 @@ const usuariosFiltrados = computed(() => {
 onMounted(async () => {
   cargarInactivosLocales()
   await Promise.all([usuariosStore.cargar(), aptosStore.cargar()])
+
+  // Asegurar persistencia en el backend Render de cualquier propietario desactivado previamente
+  for (const u of (usuariosStore.lista || [])) {
+    if (estaInactivo(u.id) && u.activo) {
+      usuariosService.actualizar(u.id, { activo: false }).catch(() => {})
+      const aptos = (aptosStore.lista || []).filter(a => a.propietario_id === u.id)
+      for (const a of aptos) {
+        apartamentosService.actualizar(a.id, { activo: false }).catch(() => {})
+      }
+    }
+  }
 })
 
 function abrirModalCrear() {
@@ -291,19 +302,17 @@ async function alternarEstado(usuario) {
   }
   guardarInactivosLocales()
 
-  // Sincronizar en cascada en apartamentos del usuario
-  const aptosDelUsuario = (aptosStore.lista || []).filter(a => a.propietario_id === usuario.id)
-  for (const apto of aptosDelUsuario) {
-    try {
-      await apartamentosService.actualizar(apto.id, { activo: !nuevoEstadoInactivo })
-    } catch (e) {}
-  }
-
-  // Intento de actualización en backend
   try {
     await usuariosService.actualizar(usuario.id, { activo: !nuevoEstadoInactivo })
-  } catch (e) {}
-  await aptosStore.cargar()
+    const aptosDelUsuario = (aptosStore.lista || []).filter(a => a.propietario_id === usuario.id)
+    for (const apto of aptosDelUsuario) {
+      await apartamentosService.actualizar(apto.id, { activo: !nuevoEstadoInactivo })
+    }
+    await usuariosStore.cargar()
+    await aptosStore.cargar()
+  } catch (e) {
+    console.error('Error sincronizando estado de usuario:', e)
+  }
 }
 
 async function guardarPropietario() {

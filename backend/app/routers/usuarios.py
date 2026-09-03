@@ -81,6 +81,11 @@ def actualizar_usuario(
     for campo, valor in update_data.items():
         setattr(usuario, campo, valor)
 
+    # Sincronización bidireccional inmediata en BD: Si cambia activo, propagar a todos sus inmuebles
+    if "activo" in update_data:
+        for a in usuario.apartamentos:
+            a.activo = usuario.activo
+
     db.commit()
     db.refresh(usuario)
     return usuario
@@ -97,6 +102,8 @@ def alternar_estado_usuario(
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     usuario.activo = not bool(usuario.activo)
+    for a in usuario.apartamentos:
+        a.activo = usuario.activo
     db.commit()
     db.refresh(usuario)
     return usuario

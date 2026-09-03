@@ -69,6 +69,11 @@ def actualizar_apartamento(
         raise HTTPException(status_code=404, detail="Apartamento no encontrado")
     for campo, valor in data.model_dump(exclude_unset=True).items():
         setattr(apto, campo, valor)
+    
+    # Sincronización bidireccional inmediata en BD: Si cambia activo, propagar al propietario
+    if "activo" in data.model_dump(exclude_unset=True) and apto.propietario:
+        apto.propietario.activo = apto.activo
+
     db.commit()
     db.refresh(apto)
     return apto
@@ -85,6 +90,8 @@ def alternar_estado_apartamento(
     if not apto:
         raise HTTPException(status_code=404, detail="Apartamento no encontrado")
     apto.activo = not bool(apto.activo)
+    if apto.propietario:
+        apto.propietario.activo = apto.activo
     db.commit()
     db.refresh(apto)
     return apto
