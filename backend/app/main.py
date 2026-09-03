@@ -10,7 +10,7 @@ from app.models.apartamento import Apartamento
 from app.models.tasa_bcv import TasaBCV
 from datetime import date
 from decimal import Decimal
-from app.routers import auth, tasa, usuarios, apartamentos, recibos, pagos, conciliacion, reportes
+from app.routers import auth, tasa, usuarios, apartamentos, recibos, pagos, conciliacion, reportes, whatsapp_bot
 from app.config import get_settings
 
 settings = get_settings()
@@ -21,7 +21,7 @@ def auto_seed_database():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        # Migración segura de columnas 'activo'
+        # Migración segura de columnas 'activo' y 'meses_pendientes'
         with engine.begin() as conn:
             try:
                 conn.execute(text("ALTER TABLE usuarios ADD COLUMN activo BOOLEAN DEFAULT 1"))
@@ -29,6 +29,10 @@ def auto_seed_database():
                 pass
             try:
                 conn.execute(text("ALTER TABLE apartamentos ADD COLUMN activo BOOLEAN DEFAULT 1"))
+            except Exception:
+                pass
+            try:
+                conn.execute(text("ALTER TABLE apartamentos ADD COLUMN meses_pendientes INTEGER DEFAULT 1"))
             except Exception:
                 pass
 
@@ -76,6 +80,7 @@ def auto_seed_database():
                 piso="2",
                 torre="A",
                 alicuota=Decimal("15.00"),
+                meses_pendientes=1,
                 activo=True,
                 propietario_id=cesar.id,
             )
@@ -84,6 +89,7 @@ def auto_seed_database():
                 piso="2",
                 torre="A",
                 alicuota=Decimal("15.00"),
+                meses_pendientes=1,
                 activo=True,
                 propietario_id=lormy.id,
             )
@@ -135,6 +141,7 @@ app.include_router(recibos.router)        # /api/recibos/
 app.include_router(pagos.router)          # /api/pagos/
 app.include_router(conciliacion.router)   # /api/conciliacion/
 app.include_router(reportes.router)       # /api/reportes/
+app.include_router(whatsapp_bot.router)   # /api/whatsapp-bot/
 
 
 @app.get("/", tags=["Root"])

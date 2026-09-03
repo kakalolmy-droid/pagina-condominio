@@ -1,4 +1,4 @@
-from app.routers import auth, tasa, usuarios, apartamentos, recibos, pagos, conciliacion, reportes
+from app.routers import auth, tasa, usuarios, apartamentos, recibos, pagos, conciliacion, reportes, whatsapp_bot
 
 __all__ = [
     "auth",
@@ -9,4 +9,5 @@ __all__ = [
     "pagos",
     "conciliacion",
     "reportes",
+    "whatsapp_bot",
 ]
