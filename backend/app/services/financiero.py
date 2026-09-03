@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from sqlalchemy.orm import Session
 from app.models.apartamento import Apartamento
 from app.models.recibo import Recibo
+from app.models.pago import Pago
 from app.services.bcv_scraper import obtener_tasa_actual
 from app.schemas.recibo import EmisionMasivaRequest
 
@@ -201,7 +202,8 @@ def sincronizar_recibos_segun_meses_pendientes(db: Session, apto: Apartamento):
                 fecha_vencimiento=f_venc,
             )
             db.add(nuevo)
-        else:
+        elif recibo.estado_pago != "pagado":
+            # NUNCA sobreescribir recibos que ya hayan sido pagados o conciliados
             recibo.monto_total_usd = cuota
             recibo.monto_pendiente_usd = cuota
             recibo.estado_pago = "pendiente"
@@ -218,10 +220,36 @@ def sincronizar_recibos_segun_meses_pendientes(db: Session, apto: Apartamento):
 
 
 def sincronizar_recibos_todos_apartamentos(db: Session):
-    """Sincroniza los recibos de todos los apartamentos según su campo meses_pendientes."""
+    """
+    Sincroniza y garantiza coherencia total entre pagos, recibos y deudas:
+    1. Si un recibo tiene pagos aprobados, garantiza su estado 'pagado' y monto_pendiente_usd = 0.
+    2. Recalcula meses_pendientes basándose exactamente en los recibos no pagados.
+    3. Si el administrador fijó manualmente una deuda mayor a los recibos existentes,
+       genera los recibos pendientes correspondientes hacia atrás.
+    """
     apartamentos = db.query(Apartamento).all()
     for apto in apartamentos:
-        sincronizar_recibos_segun_meses_pendientes(db, apto)
+        # Paso 1: Asegurar que todo recibo con pago aprobado esté pagado
+        recibos_apto = db.query(Recibo).filter(Recibo.apartamento_id == apto.id).all()
+        for r in recibos_apto:
+            pago_aprobado = db.query(Pago).filter(
+                Pago.recibo_id == r.id,
+                Pago.estado_conciliacion == "aprobado"
+            ).first()
+            if pago_aprobado:
+                r.estado_pago = "pagado"
+                r.monto_pendiente_usd = Decimal("0.00")
+
+        # Paso 2: Contar los recibos no pagados
+        no_pagados = [r for r in recibos_apto if r.estado_pago != "pagado"]
+        
+        # Si se configuraron manualmente más meses que los recibos existentes
+        if apto.meses_pendientes and apto.meses_pendientes > len(no_pagados):
+            sincronizar_recibos_segun_meses_pendientes(db, apto)
+        else:
+            # Sincronizar meses_pendientes con los recibos pendientes reales
+            apto.meses_pendientes = len([r for r in recibos_apto if r.estado_pago != "pagado"])
+
     db.commit()
 
 

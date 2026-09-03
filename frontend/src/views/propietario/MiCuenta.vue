@@ -114,10 +114,51 @@
                 </td>
                 <td class="py-3 text-neu-text-light text-xs">{{ formatFecha(recibo.fecha_vencimiento) }}</td>
                 <td class="py-3 text-center">
-                  <EstadoPagoBadge :estado="recibo.estado_pago" />
+                  <span
+                    v-if="recibo.estado_pago === 'pagado'"
+                    class="badge-success text-[11px] font-bold px-2.5 py-1 inline-flex items-center gap-1 shadow-sm"
+                  >
+                    ✓ Aprobado
+                  </span>
+                  <span
+                    v-else-if="recibo.ultimo_pago_estado === 'en_revision'"
+                    class="badge-warning text-[11px] font-bold px-2.5 py-1 inline-flex items-center gap-1 shadow-sm"
+                    title="Tu pago fue reportado y está en revisión"
+                  >
+                    ⏳ En Revisión
+                  </span>
+                  <span
+                    v-else-if="recibo.ultimo_pago_estado === 'rechazado'"
+                    class="badge-danger text-[11px] font-bold px-2.5 py-1 inline-flex items-center gap-1 shadow-sm"
+                  >
+                    ❌ Rechazado
+                  </span>
+                  <span
+                    v-else
+                    class="badge-danger text-[11px] font-bold px-2.5 py-1 inline-flex items-center gap-1 shadow-sm"
+                  >
+                    ● Pendiente
+                  </span>
                 </td>
                 <td class="py-3 text-center">
+                  <span v-if="recibo.estado_pago === 'pagado'" class="text-xs font-bold text-neu-green">
+                    ✓ Solvente
+                  </span>
+                  <span
+                    v-else-if="recibo.ultimo_pago_estado === 'en_revision'"
+                    class="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-neu-sm border border-amber-300"
+                  >
+                    Verificando...
+                  </span>
                   <RouterLink
+                    v-else-if="recibo.ultimo_pago_estado === 'rechazado'"
+                    :to="{ path: '/mi-cuenta/pagar', query: { recibo_id: recibo.id } }"
+                    class="text-xs font-bold text-neu-danger bg-neu-bg px-3 py-1.5 rounded-neu-sm shadow-neu-sm hover:shadow-neu-inset transition-all"
+                  >
+                    Reintentar Pago
+                  </RouterLink>
+                  <RouterLink
+                    v-else
                     :to="{ path: '/mi-cuenta/pagar', query: { recibo_id: recibo.id } }"
                     class="text-xs font-bold text-neu-green bg-neu-bg px-3 py-1.5 rounded-neu-sm shadow-neu-sm hover:shadow-neu-inset transition-all"
                   >

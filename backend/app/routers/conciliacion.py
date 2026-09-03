@@ -65,8 +65,17 @@ def aprobar_pago(
     pago.fecha_aprobacion = datetime.utcnow()
     pago.aprobado_por = admin.id
 
+    # Actualizar meses_pendientes del apartamento en tiempo real
+    recibos_restantes = db.query(Recibo).filter(
+        Recibo.apartamento_id == apto.id,
+        Recibo.estado_pago != "pagado"
+    ).count()
+    apto.meses_pendientes = recibos_restantes
+
     db.commit()
     db.refresh(pago)
+    db.refresh(recibo)
+    db.refresh(apto)
 
     try:
         from app.tasks.notificaciones import enviar_whatsapp
