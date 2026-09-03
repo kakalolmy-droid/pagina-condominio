@@ -10,27 +10,25 @@ from app.models.apartamento import Apartamento
 from app.models.tasa_bcv import TasaBCV
 from datetime import date
 from decimal import Decimal
-from app.routers import auth, tasa, usuarios, apartamentos, recibos, pagos, conciliacion, reportes, whatsapp_bot
+from app.routers import auth, tasa, usuarios, apartamentos, recibos, pagos, conciliacion, reportes
 from app.config import get_settings
 
 settings = get_settings()
 
 
 def auto_seed_database():
-    """Auto-inicializa tablas, aplica migraciones dinámicas y datos de prueba (Cloud / Render)."""
+    """Auto-inicializa tablas y datos de prueba si la base de datos está vacía (Cloud / Render)."""
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        # Migración automática de columnas 'activo' si la tabla ya existía en SQLite sin ellas
-        with engine.connect() as conn:
+        # Migración segura de columnas 'activo'
+        with engine.begin() as conn:
             try:
                 conn.execute(text("ALTER TABLE usuarios ADD COLUMN activo BOOLEAN DEFAULT 1"))
-                conn.commit()
             except Exception:
                 pass
             try:
                 conn.execute(text("ALTER TABLE apartamentos ADD COLUMN activo BOOLEAN DEFAULT 1"))
-                conn.commit()
             except Exception:
                 pass
 
@@ -75,7 +73,7 @@ def auto_seed_database():
             # Apartamentos
             apto1 = Apartamento(
                 numero_apto="2-6",
-                piso=2,
+                piso="2",
                 torre="A",
                 alicuota=Decimal("15.00"),
                 activo=True,
@@ -83,7 +81,7 @@ def auto_seed_database():
             )
             apto2 = Apartamento(
                 numero_apto="2-5",
-                piso=2,
+                piso="2",
                 torre="A",
                 alicuota=Decimal("15.00"),
                 activo=True,
@@ -96,11 +94,6 @@ def auto_seed_database():
             db.add(tasa_ini)
             db.commit()
             print("🌱 Base de datos auto-inicializada con usuarios de prueba en la nube.")
-        else:
-            # Asegurar que todos los usuarios tengan activo=True si estaba en null
-            db.execute(text("UPDATE usuarios SET activo = 1 WHERE activo IS NULL"))
-            db.execute(text("UPDATE apartamentos SET activo = 1 WHERE activo IS NULL"))
-            db.commit()
     except Exception as e:
         print(f"Nota en auto_seed: {e}")
     finally:
@@ -142,7 +135,6 @@ app.include_router(recibos.router)        # /api/recibos/
 app.include_router(pagos.router)          # /api/pagos/
 app.include_router(conciliacion.router)   # /api/conciliacion/
 app.include_router(reportes.router)       # /api/reportes/
-app.include_router(whatsapp_bot.router)   # /api/whatsapp-bot/
 
 
 @app.get("/", tags=["Root"])
