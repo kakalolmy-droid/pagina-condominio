@@ -115,10 +115,14 @@ export function estadoConciliacion(estado) {
  * Mapea el estado de pago del recibo a etiqueta y variante.
  */
 export function estadoPago(estado) {
+  if (!estado) return { label: '—', variant: 'info' }
+  const normalizado = String(estado).toLowerCase().trim()
   const mapa = {
     pendiente: { label: 'Pendiente', variant: 'danger' },
     parcial:   { label: 'Parcial',   variant: 'warning' },
     pagado:    { label: 'Pagado',    variant: 'success' },
+    moroso:    { label: 'Moroso',    variant: 'danger' },
+    solvente:  { label: 'Solvente',  variant: 'success' },
   }
-  return mapa[estado] || { label: estado, variant: 'info' }
+  return mapa[normalizado] || { label: estado, variant: 'info' }
 }
