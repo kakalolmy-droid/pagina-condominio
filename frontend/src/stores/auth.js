@@ -34,6 +34,24 @@ export const useAuthStore = defineStore('auth', () => {
     return data
   }
 
+  async function registro(payload) {
+    const response = await api.post('/auth/registro', payload)
+    const data = response.data
+    token.value = data.access_token
+    rol.value = data.rol
+    nombre.value = data.nombre
+    usuarioId.value = String(data.usuario_id)
+
+    localStorage.setItem('token', data.access_token)
+    localStorage.setItem('rol', data.rol)
+    localStorage.setItem('nombre', data.nombre)
+    localStorage.setItem('usuarioId', String(data.usuario_id))
+
+    api.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`
+
+    return data
+  }
+
   function logout() {
     token.value = null
     rol.value = null
