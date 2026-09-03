@@ -101,3 +101,35 @@ def obtener_matriz_deudas(db: Session) -> list[dict]:
         })
 
     return sorted(matriz, key=lambda x: x["estado"] != "moroso")
+
+
+def verificar_facturacion_automatica_mensual(db: Session):
+    """
+    Revisa si ya se facturó el mes en curso (YYYY-MM).
+    Si ha cambiado el mes en el calendario y aún no se ha facturado, emite automáticamente
+    la cuota del mes para todos los apartamentos activos e incrementa meses_pendientes.
+    """
+    hoy = date.today()
+    mes_actual_str = hoy.strftime("%Y-%m")
+
+    # Si ya existen recibos para el mes actual, no duplicar
+    recibo_este_mes = db.query(Recibo).filter(Recibo.mes_periodo == mes_actual_str).first()
+    if not recibo_este_mes:
+        apartamentos = db.query(Apartamento).filter(Apartamento.activo == True).all()
+        for apto in apartamentos:
+            if apto.propietario and not apto.propietario.activo:
+                continue
+            apto.meses_pendientes = (apto.meses_pendientes or 0) + 1
+            monto = Decimal(str(apto.alicuota or 15.00))
+            nuevo_recibo = Recibo(
+                apartamento_id=apto.id,
+                mes_periodo=mes_actual_str,
+                monto_total_usd=monto,
+                monto_pendiente_usd=monto,
+                estado_pago="pendiente",
+                fecha_emision=hoy,
+                fecha_vencimiento=hoy + timedelta(days=15),
+            )
+            db.add(nuevo_recibo)
+        db.commit()
+

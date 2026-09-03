@@ -111,11 +111,13 @@ async def lifespan(app: FastAPI):
     auto_seed_database()
     try:
         from app.services.bcv_scraper import actualizar_tasa_bcv
+        from app.services.financiero import verificar_facturacion_automatica_mensual
         db = SessionLocal()
         await actualizar_tasa_bcv(db)
+        verificar_facturacion_automatica_mensual(db)
         db.close()
     except Exception as e:
-        print(f"Nota actualizando tasa en lifespan: {e}")
+        print(f"Nota en lifespan: {e}")
     print(f"🏢 {settings.condominio_nombre} — API iniciada con éxito en Render")
     yield
     print("🛑 API detenida")

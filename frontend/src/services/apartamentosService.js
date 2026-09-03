@@ -24,4 +24,10 @@ export const apartamentosService = {
 
   sumaAlicuotas: () =>
     api.get('/apartamentos/suma-alicuotas'),
+
+  simularAvanceMes: () =>
+    api.post('/apartamentos/simular-avance-mes'),
+
+  revertirMes: () =>
+    api.post('/apartamentos/revertir-mes'),
 }

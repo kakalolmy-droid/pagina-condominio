@@ -126,3 +126,57 @@ def verificar_suma_alicuotas(
         "promedio_cuota_usd": round(total_recaudacion_esperada / len(activos), 2) if activos else 0,
         "es_valida": True,
     }
+
+
+@router.post("/simular-avance-mes")
+def simular_avance_mes(
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    """
+    Simula el paso a un nuevo mes de facturación.
+    Incrementa +1 mes de deuda a todos los apartamentos activos
+    y recalcula las deudas del condominio.
+    """
+    apartamentos = db.query(Apartamento).filter(Apartamento.activo == True).all()
+    actualizados = 0
+
+    for apto in apartamentos:
+        if apto.propietario and not apto.propietario.activo:
+            continue
+
+        apto.meses_pendientes = (apto.meses_pendientes or 0) + 1
+        actualizados += 1
+
+    db.commit()
+    return {
+        "mensaje": f"Se ha simulado el avance al siguiente mes. {actualizados} apartamentos activos recibieron +1 mes de cuota.",
+        "apartamentos_actualizados": actualizados,
+    }
+
+
+@router.post("/revertir-mes")
+def revertir_mes(
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    """
+    Resta 1 mes de deuda a los apartamentos activos que tengan al menos 1 mes pendiente.
+    Permite deshacer la simulación.
+    """
+    apartamentos = db.query(Apartamento).filter(Apartamento.activo == True).all()
+    actualizados = 0
+
+    for apto in apartamentos:
+        if apto.propietario and not apto.propietario.activo:
+            continue
+        if apto.meses_pendientes and apto.meses_pendientes > 0:
+            apto.meses_pendientes -= 1
+            actualizados += 1
+
+    db.commit()
+    return {
+        "mensaje": f"Se ha revertido 1 mes de cuota a {actualizados} apartamentos activos.",
+        "apartamentos_actualizados": actualizados,
+    }
+

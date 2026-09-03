@@ -39,9 +39,35 @@
         />
       </div>
 
-      <NeuButton variant="primary" @click="abrirModalCrear">
-        ➕ Registrar Apartamento
-      </NeuButton>
+      <div class="flex items-center gap-2.5 flex-wrap w-full md:w-auto justify-end">
+        <!-- Botón de Simulación de Cambio de Mes -->
+        <button
+          type="button"
+          @click="simularAvanceMes"
+          :disabled="simulando"
+          class="px-3.5 py-2 rounded-neu-sm bg-neu-bg shadow-neu-sm hover:shadow-neu text-xs font-bold text-neu-green border border-white/60 flex items-center gap-1.5 cursor-pointer transition-all"
+          title="Simular paso al siguiente mes sumando +1 mes de cuota a todos los apartamentos activos"
+        >
+          <span>📅</span>
+          <span>{{ simulando ? 'Simulando...' : 'Simular Fin de Mes (+1 Cuota)' }}</span>
+        </button>
+
+        <button
+          v-if="seHaSimulado"
+          type="button"
+          @click="revertirSimulacion"
+          :disabled="simulando"
+          class="px-3 py-2 rounded-neu-sm bg-neu-bg shadow-neu-sm hover:shadow-neu text-xs font-bold text-neu-text-light hover:text-neu-danger border border-white/60 flex items-center gap-1 cursor-pointer transition-all"
+          title="Deshacer el mes de prueba sumado"
+        >
+          <span>↩️</span>
+          <span>Deshacer</span>
+        </button>
+
+        <NeuButton variant="primary" @click="abrirModalCrear">
+          ➕ Registrar Apartamento
+        </NeuButton>
+      </div>
     </div>
 
     <!-- Tabla de Apartamentos -->
@@ -239,6 +265,8 @@ const busqueda = ref('')
 const modalAbierto = ref(false)
 const editandoId = ref(null)
 const guardando = ref(false)
+const simulando = ref(false)
+const seHaSimulado = ref(false)
 
 // Sincronización persistente
 const inactivosAptosIds = ref(new Set())
@@ -399,6 +427,39 @@ async function confirmarEliminacion(apto) {
     } catch (error) {
       toast.error('Error al eliminar apartamento')
     }
+  }
+}
+
+async function simularAvanceMes() {
+  const confirmacion = confirm(
+    "¿Deseas simular el avance al siguiente mes?\n\nEsto sumará automáticamente 1 mes de cuota ($15.00) a todos los apartamentos activos para verificar la actualización de deudas."
+  )
+  if (!confirmacion) return
+
+  simulando.value = true
+  try {
+    const res = await apartamentosService.simularAvanceMes()
+    toast.success(res.data?.mensaje || "¡Mes avanzado con éxito! Deudas actualizadas.")
+    seHaSimulado.value = true
+    await aptosStore.cargar()
+  } catch (e) {
+    toast.error("Error al simular el cambio de mes")
+  } finally {
+    simulando.value = false
+  }
+}
+
+async function revertirSimulacion() {
+  simulando.value = true
+  try {
+    const res = await apartamentosService.revertirMes()
+    toast.info(res.data?.mensaje || "Mes revertido correctamente.")
+    seHaSimulado.value = false
+    await aptosStore.cargar()
+  } catch (e) {
+    toast.error("Error al revertir simulación")
+  } finally {
+    simulando.value = false
   }
 }
 </script>
