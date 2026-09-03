@@ -3,79 +3,60 @@
     titulo="Avisos y Cobranzas Masivas por WhatsApp"
     subtitulo="Envío masivo automático a todos los números registrados con fecha límite, datos bancarios y link de pago"
   >
-    <!-- Tarjeta 1: Vinculación Oficial de la Línea WhatsApp del Condominio (Con Código QR en Vivo) -->
+    <!-- Tarjeta 1: Despacho Directo por WhatsApp (Sin dependencias externas) -->
     <NeuCard class="mb-8 border-2 border-neu-green/30">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div class="flex items-center gap-3">
           <span class="text-3xl">📱</span>
           <div>
-            <h3 class="text-lg font-bold text-neu-green">Línea Oficial de WhatsApp de la Junta / Condominio</h3>
+            <h3 class="text-lg font-bold text-neu-green">Centro de Notificaciones y Cobranzas WhatsApp</h3>
             <p class="text-xs text-neu-text-light">
-              Vincula el número que la junta de condominio o administración utilizará para despachar los mensajes masivos
+              Despacho inteligente de avisos de cobro con cálculo de meses pendientes y link de pago
             </p>
           </div>
         </div>
 
         <div class="flex items-center gap-2">
-          <span
-            class="px-3 py-1.5 rounded-full text-xs font-bold"
-            :class="botEstado.connected ? 'badge-success' : 'badge-warning'"
-          >
-            {{ botEstado.connected ? '● LÍNEA CONECTADA Y LISTA' : '○ PENDIENTE DE VINCULACIÓN' }}
+          <span class="px-3 py-1.5 rounded-full text-xs font-bold badge-success">
+            ● SISTEMA DE ENVÍO ACTIVO
           </span>
-          <button
-            v-if="botEstado.connected"
-            @click="desvincularNumero"
-            class="px-3 py-1.5 rounded-neu-sm text-xs font-bold bg-red-600 text-white shadow-neu-sm hover:bg-red-700 transition-all cursor-pointer"
-          >
-            Cambiar Número
-          </button>
         </div>
       </div>
 
-      <!-- Estado Conectado -->
-      <div v-if="botEstado.connected" class="p-4 bg-neu-bg-dark rounded-neu-sm border border-neu-shadow-dark flex flex-col sm:flex-row justify-between items-center gap-2">
-        <div class="text-xs text-neu-text">
-          <p class="font-bold text-neu-green">✅ WhatsApp Autónomo Activo</p>
-          <p class="text-neu-text-light mt-0.5">
-            Línea emisora: <span class="font-mono font-semibold text-neu-text">{{ botEstado.session?.id || 'Número Oficial Vinculado' }}</span>
-          </p>
-        </div>
-        <span class="text-xs text-neu-text-light italic">Todos los avisos saldrán directamente desde este número sin abrir WhatsApp Web</span>
-      </div>
-
-      <!-- Estado No Conectado: Mostrar Código QR para escanear con el celular -->
-      <div v-else class="p-4 bg-neu-bg-dark rounded-neu-sm border border-neu-shadow-dark flex flex-col md:flex-row items-center gap-6">
-        <div v-if="botEstado.qr" class="flex flex-col items-center bg-white p-3 rounded-neu-sm shadow-neu-sm">
-          <img :src="botEstado.qr" alt="Código QR WhatsApp" class="w-44 h-44 object-contain" />
-          <span class="text-xs text-black font-semibold mt-2">Escanea este QR</span>
-        </div>
-        <div v-else class="flex items-center justify-center w-44 h-44 bg-neu-bg rounded-neu-sm border border-neu-shadow-dark text-xs text-neu-text-light">
-          Generando código QR...
+      <!-- Métodos de envío -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="p-4 bg-neu-bg-dark rounded-neu-sm border border-neu-shadow-dark flex flex-col justify-between">
+          <div>
+            <p class="font-bold text-neu-green text-sm flex items-center gap-1.5">
+              <span>🚀</span> Envío Masivo 1-Clic
+            </p>
+            <p class="text-xs text-neu-text-light mt-1">
+              Despacha las notificaciones en lote a todos los copropietarios activos registrados con su cuota y meses adeudados calculados.
+            </p>
+          </div>
         </div>
 
-        <div class="flex-1 text-xs text-neu-text flex flex-col gap-2">
-          <p class="font-bold text-neu-green text-sm">📲 Pasos para Vincular la Línea Oficial:</p>
-          <ol class="list-decimal list-inside space-y-1 text-neu-text-light">
-            <li>Abre la aplicación de <strong>WhatsApp</strong> en el teléfono de la Junta / Condominio.</li>
-            <li>Toca en <strong>Menú / Ajustes (⚙️)</strong> y selecciona <strong>Dispositivos vinculados</strong>.</li>
-            <li>Toca en <strong>Vincular un dispositivo</strong> y apunta la cámara a este código QR.</li>
-          </ol>
-          <p class="text-neu-green font-semibold mt-1">
-            Una vez escaneado, la sesión queda guardada de forma permanente en Docker y podrás cambiar de número cuando quieras.
-          </p>
+        <div class="p-4 bg-neu-bg-dark rounded-neu-sm border border-neu-shadow-dark flex flex-col justify-between">
+          <div>
+            <p class="font-bold text-neu-green text-sm flex items-center gap-1.5">
+              <span>💬</span> Lista Individualizada con Enlaces WhatsApp
+            </p>
+            <p class="text-xs text-neu-text-light mt-1">
+              Genera los mensajes individualizados con un solo clic para abrirlos directamente en WhatsApp Web o en tu celular.
+            </p>
+          </div>
         </div>
       </div>
     </NeuCard>
 
-    <!-- Tarjeta 2: Formulario de Despacho Masivo Automático -->
+    <!-- Tarjeta 2: Formulario de Configuración de Aviso Masivo -->
     <NeuCard class="mb-8">
       <div class="flex items-center gap-3 mb-4">
-        <span class="text-3xl">🚀</span>
+        <span class="text-3xl">⚙️</span>
         <div>
-          <h3 class="text-lg font-bold text-neu-green">Configurar Aviso Masivo y Enviar a Todos</h3>
+          <h3 class="text-lg font-bold text-neu-green">Configuración del Aviso de Cobro</h3>
           <p class="text-xs text-neu-text-light">
-            Indica la fecha límite de pago y los datos bancarios. Al hacer clic, el servidor enviará a todos los números vinculados en la base de datos de manera inmediata.
+            Indica la fecha límite de pago y los datos bancarios para adjuntar en los mensajes
           </p>
         </div>
       </div>
@@ -138,12 +119,74 @@
           placeholder="Ej. Recordamos que a partir del día 15 se genera recargo por mora."
         />
 
-        <div class="flex justify-end gap-3 mt-2">
+        <div class="flex flex-wrap justify-end gap-3 mt-2">
           <NeuButton variant="primary" type="submit" :loading="enviando">
-            📲 Enviar Automáticamente a Todos los Números Vinculados
+            🚀 Enviar Masivo Automático
           </NeuButton>
         </div>
       </form>
+    </NeuCard>
+
+    <!-- Tarjeta 3: Lista de Destinatarios Activos y Enlaces Directos WhatsApp -->
+    <NeuCard class="mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-lg font-bold text-neu-green">📋 Copropietarios Activos a Notificar ({{ destinatariosFiltrados.length }})</h3>
+          <p class="text-xs text-neu-text-light">
+            Puedes enviar el mensaje directo a cada uno con un clic en su botón de WhatsApp
+          </p>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-neu-shadow-dark text-neu-text-light">
+              <th class="pb-3 font-semibold">Apartamento</th>
+              <th class="pb-3 font-semibold">Propietario</th>
+              <th class="pb-3 font-semibold">Teléfono</th>
+              <th class="pb-3 font-semibold">Meses Pendientes</th>
+              <th class="pb-3 font-semibold">Total USD</th>
+              <th class="pb-3 font-semibold">Equivalente VES</th>
+              <th class="pb-3 font-semibold text-center">Acción Directa</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="item in destinatariosFiltrados"
+              :key="item.apto.id"
+              class="border-b border-neu-bg-dark hover:bg-neu-bg-dark/50 transition-colors"
+            >
+              <td class="py-3 font-bold text-neu-green">Apto {{ item.apto.numero_apto }}</td>
+              <td class="py-3 font-semibold text-neu-text">{{ item.propietario.nombre }} {{ item.propietario.apellido }}</td>
+              <td class="py-3 text-neu-text-light">{{ item.propietario.telefono_whatsapp }}</td>
+              <td class="py-3">
+                <span class="font-bold px-2 py-0.5 rounded-full text-xs" :class="item.meses > 0 ? 'badge-danger' : 'badge-success'">
+                  {{ item.meses }} mes(es)
+                </span>
+              </td>
+              <td class="py-3 font-bold text-neu-green">${{ item.totalUsd.toFixed(2) }} USD</td>
+              <td class="py-3 text-neu-text-light">
+                Bs. {{ (item.totalUsd * tasaActualNum).toLocaleString('es-VE', { minimumFractionDigits: 2 }) }}
+              </td>
+              <td class="py-3 text-center">
+                <a
+                  :href="generarLinkWhatsApp(item)"
+                  target="_blank"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-neu-sm text-xs font-bold bg-emerald-700 hover:bg-emerald-600 text-white shadow-neu-sm transition-all"
+                >
+                  <span>💬 Enviar WhatsApp</span>
+                </a>
+              </td>
+            </tr>
+            <tr v-if="destinatariosFiltrados.length === 0">
+              <td colspan="7" class="py-6 text-center text-neu-text-light">
+                No hay apartamentos activos para notificar.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </NeuCard>
 
     <!-- Confirmación de Despacho Exitoso -->
@@ -153,7 +196,7 @@
         <div>
           <h3 class="text-lg font-bold text-neu-green">{{ resultadoEnvio.mensaje }}</h3>
           <p class="text-xs text-neu-text-light mt-1">
-            Total notificados: <span class="font-bold text-neu-text">{{ resultadoEnvio.total_destinatarios }}</span> propietarios ({{ resultadoEnvio.destinatarios?.join(', ') }})
+            Total procesados: <span class="font-bold text-neu-text">{{ resultadoEnvio.total_destinatarios }}</span> propietarios ({{ resultadoEnvio.destinatarios?.join(', ') }})
           </p>
         </div>
       </div>
@@ -211,23 +254,23 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { AdminLayout } from '@/components/layout'
 import { NeuCard, NeuButton, NeuInput } from '@/components/neumorph'
-import { reportesService, api } from '@/services'
-import { useTasaStore } from '@/stores'
+import { reportesService } from '@/services'
+import { useTasaStore, useApartamentosStore, useUsuariosStore } from '@/stores'
 import { formatTasa, periodoActual } from '@/utils'
 
 const toast = useToast()
 const tasaStore = useTasaStore()
+const aptosStore = useApartamentosStore()
+const usuariosStore = useUsuariosStore()
 
 const periodoExcel = ref(periodoActual())
 const exportando = ref(false)
 const enviando = ref(false)
 const resultadoEnvio = ref(null)
-const botEstado = ref({ connected: false, session: null, qr: null })
-let pollingTimer = null
 
 const formAvisos = ref({
   periodo: periodoActual(),
@@ -239,43 +282,79 @@ const formAvisos = ref({
   nota_adicional: '',
 })
 
+const tasaActualNum = computed(() => {
+  if (!tasaStore.tasaActual) return 800.0
+  return typeof tasaStore.tasaActual === 'number'
+    ? tasaStore.tasaActual
+    : parseFloat(tasaStore.tasaActual.tasa_usd_ves || 800.0)
+})
+
+const destinatariosFiltrados = computed(() => {
+  const inactivosAptos = new Set(JSON.parse(localStorage.getItem('alcatraz_aptos_inactivos') || '[]'))
+  const inactivosUsers = new Set(JSON.parse(localStorage.getItem('alcatraz_usuarios_inactivos') || '[]'))
+  
+  const res = []
+  for (const apto of (aptosStore.lista || [])) {
+    if (inactivosAptos.has(apto.id) || (apto.propietario_id && inactivosUsers.has(apto.propietario_id))) {
+      continue
+    }
+    const prop = (usuariosStore.lista || []).find(u => u.id === apto.propietario_id) || apto.propietario
+    if (!prop) continue
+
+    const cuota = parseFloat(apto.alicuota) || 15.0
+    const meses = parseInt(apto.meses_pendientes !== undefined ? apto.meses_pendientes : 1)
+    const totalUsd = cuota * meses
+
+    res.push({
+      apto,
+      propietario: prop,
+      cuota,
+      meses,
+      totalUsd,
+    })
+  }
+  return res
+})
+
 onMounted(async () => {
   await Promise.all([
     tasaStore.cargarTasa(),
-    cargarEstadoBot(),
+    aptosStore.cargar(),
+    usuariosStore.cargar(),
   ])
-
-  // Sondeo de estado del QR cada 3 segundos hasta que se vincule
-  pollingTimer = setInterval(async () => {
-    if (!botEstado.value.connected) {
-      await cargarEstadoBot()
-    }
-  }, 3000)
 })
 
-onUnmounted(() => {
-  if (pollingTimer) clearInterval(pollingTimer)
-})
+function generarLinkWhatsApp(item) {
+  const telLimpio = item.propietario.telefono_whatsapp ? item.propietario.telefono_whatsapp.replace(/[^0-9]/g, '') : ''
+  const telFormateado = (!telLimpio.startsWith('58') && telLimpio.length === 10) ? `58${telLimpio}` : telLimpio
 
-async function cargarEstadoBot() {
-  try {
-    const { data } = await api.get('/whatsapp-bot/status')
-    botEstado.value = data
-  } catch (e) {
-    console.error('Error al cargar estado del bot:', e)
-  }
-}
+  const totalVes = (item.totalUsd * tasaActualNum.value).toLocaleString('es-VE', { minimumFractionDigits: 2 })
+  const portalUrl = 'https://pagina-condominio.vercel.app/mi-cuenta/pagar'
 
-async function desvincularNumero() {
-  if (confirm('¿Desea desvincular el número actual de WhatsApp para configurar uno nuevo?')) {
-    try {
-      await api.post('/whatsapp-bot/logout')
-      toast.info('Línea desvinculada. Listo para nuevo escaneo.')
-      await cargarEstadoBot()
-    } catch (e) {
-      toast.error('Error al desvincular el número')
-    }
-  }
+  const msg = 
+`🏢 *Edificio Alcatraz — AVISO DE COBRO*
+
+Estimado/a *${item.propietario.nombre} ${item.propietario.apellido}* (Apto *${item.apto.numero_apto}*),
+
+Le informamos los datos de pago para el período *${formAvisos.value.periodo}*:
+💵 *Cuota Mensual:* $${item.cuota.toFixed(2)} USD
+📌 *Meses Pendientes:* ${item.meses} mes(es)
+💰 *TOTAL A PAGAR:* $${item.totalUsd.toFixed(2)} USD
+🇻🇪 *Equivalente en Bs:* Bs. ${totalVes} (Tasa BCV: Bs. ${tasaActualNum.value.toFixed(2)})
+📅 *Fecha Límite de Pago:* ${formAvisos.value.fecha_limite}
+
+📌 *DATOS OFICIALES DE RECAUDACIÓN:*
+• Banco: ${formAvisos.value.banco}
+• Pago Móvil: ${formAvisos.value.pago_movil}
+• Transferencia: ${formAvisos.value.transferencia}
+• Zelle: ${formAvisos.value.zelle}
+
+🔗 *Reporte su pago y adjunte su comprobante aquí:*
+${portalUrl}
+
+${formAvisos.value.nota_adicional || '¡Gracias por su puntualidad y colaboración!'}`
+
+  return `https://wa.me/${telFormateado}?text=${encodeURIComponent(msg)}`
 }
 
 async function enviarMasivo() {
