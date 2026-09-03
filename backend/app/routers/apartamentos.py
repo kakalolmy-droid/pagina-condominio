@@ -8,7 +8,11 @@ from app.database import get_db
 from app.models.apartamento import Apartamento
 from app.models.recibo import Recibo
 from app.schemas.apartamento import ApartamentoCreate, ApartamentoUpdate, ApartamentoOut
-from app.services.financiero import obtener_matriz_deudas
+from app.services.financiero import (
+    obtener_matriz_deudas,
+    sincronizar_recibos_segun_meses_pendientes,
+    sincronizar_recibos_todos_apartamentos,
+)
 from app.auth.dependencies import require_admin
 
 router = APIRouter(prefix="/api/apartamentos", tags=["Apartamentos"])
@@ -75,6 +79,9 @@ def actualizar_apartamento(
     # Sincronización bidireccional inmediata en BD: Si cambia activo, propagar al propietario
     if "activo" in data.model_dump(exclude_unset=True) and apto.propietario:
         apto.propietario.activo = apto.activo
+
+    # Sincronizar automáticamente recibos pendientes históricos con la cantidad de meses adeudados
+    sincronizar_recibos_segun_meses_pendientes(db, apto)
 
     db.commit()
     db.refresh(apto)

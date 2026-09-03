@@ -5,7 +5,7 @@ from typing import List, Optional
 from app.database import get_db
 from app.models.recibo import Recibo
 from app.schemas.recibo import ReciboOut, ReciboConApartamento, EmisionMasivaRequest
-from app.services.financiero import emitir_recibos_mes
+from app.services.financiero import emitir_recibos_mes, sincronizar_recibos_todos_apartamentos
 from app.auth.dependencies import require_admin, get_usuario_actual
 from app.models.usuario import Usuario
 from app.models.apartamento import Apartamento
@@ -20,12 +20,13 @@ def listar_recibos(
     db: Session = Depends(get_db),
     _=Depends(require_admin),
 ):
+    sincronizar_recibos_todos_apartamentos(db)
     q = db.query(Recibo)
     if periodo:
         q = q.filter(Recibo.mes_periodo == periodo)
     if estado:
         q = q.filter(Recibo.estado_pago == estado)
-    return q.order_by(Recibo.fecha_emision.desc()).all()
+    return q.order_by(Recibo.mes_periodo.desc(), Recibo.fecha_emision.desc()).all()
 
 
 @router.get("/mis-recibos", response_model=List[ReciboOut])
@@ -34,6 +35,7 @@ def mis_recibos(
     usuario_actual: Usuario = Depends(get_usuario_actual),
 ):
     """Recibos del propietario autenticado."""
+    sincronizar_recibos_todos_apartamentos(db)
     apto = db.query(Apartamento).filter(
         Apartamento.propietario_id == usuario_actual.id
     ).first()
@@ -42,7 +44,7 @@ def mis_recibos(
     return (
         db.query(Recibo)
         .filter(Recibo.apartamento_id == apto.id)
-        .order_by(Recibo.fecha_emision.desc())
+        .order_by(Recibo.mes_periodo.desc(), Recibo.fecha_emision.desc())
         .all()
     )
 

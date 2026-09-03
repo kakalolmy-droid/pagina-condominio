@@ -134,3 +134,94 @@ def verificar_facturacion_automatica_mensual(db: Session):
             db.add(nuevo_recibo)
         db.commit()
 
+
+def generar_periodos_hacia_atras(periodo_base: str, cantidad: int) -> list[str]:
+    """Genera una lista de períodos YYYY-MM hacia atrás cronológicamente desde periodo_base."""
+    if cantidad <= 0:
+        return []
+    y, m = map(int, periodo_base.split("-"))
+    periodos = []
+    for _ in range(cantidad):
+        periodos.append(f"{y:04d}-{m:02d}")
+        m -= 1
+        if m == 0:
+            m = 12
+            y -= 1
+    return periodos
+
+
+def sincronizar_recibos_segun_meses_pendientes(db: Session, apto: Apartamento):
+    """
+    Garantiza que la cantidad de recibos pendientes coincida exactamente con meses_pendientes.
+    Si un propietario tiene 15 meses de deuda ($225.00), genera los 15 recibos de los meses anteriores.
+    Si se pone en 0 meses, marca los recibos como pagados ($0.00 de deuda).
+    """
+    meses = int(apto.meses_pendientes if apto.meses_pendientes is not None else 0)
+    cuota = Decimal(str(apto.alicuota or 15.00))
+    hoy = date.today()
+    mes_actual_str = hoy.strftime("%Y-%m")
+
+    # Base de período (el mes actual o el último emitido si hay futuros)
+    ultimo_recibo = db.query(Recibo).filter(Recibo.apartamento_id == apto.id).order_by(Recibo.mes_periodo.desc()).first()
+    base_periodo = ultimo_recibo.mes_periodo if (ultimo_recibo and ultimo_recibo.mes_periodo > mes_actual_str) else mes_actual_str
+
+    if meses == 0:
+        # Apartamento solvente: todos los recibos pendientes pasan a pagado
+        recibos_pendientes = db.query(Recibo).filter(
+            Recibo.apartamento_id == apto.id,
+            Recibo.estado_pago != "pagado"
+        ).all()
+        for r in recibos_pendientes:
+            r.estado_pago = "pagado"
+            r.monto_pendiente_usd = Decimal("0.00")
+        return
+
+    # Obtener exactamente los N períodos que deben estar pendientes hacia atrás
+    periodos_requeridos = generar_periodos_hacia_atras(base_periodo, meses)
+
+    # 1. Asegurar la existencia y monto de los N recibos pendientes
+    for p in periodos_requeridos:
+        recibo = db.query(Recibo).filter(
+            Recibo.apartamento_id == apto.id,
+            Recibo.mes_periodo == p
+        ).first()
+
+        y, m = map(int, p.split("-"))
+        f_emision = date(y, m, 1)
+        f_venc = date(y, m, 15)
+
+        if not recibo:
+            nuevo = Recibo(
+                apartamento_id=apto.id,
+                mes_periodo=p,
+                monto_total_usd=cuota,
+                monto_pendiente_usd=cuota,
+                estado_pago="pendiente",
+                fecha_emision=f_emision,
+                fecha_vencimiento=f_venc,
+            )
+            db.add(nuevo)
+        else:
+            recibo.monto_total_usd = cuota
+            recibo.monto_pendiente_usd = cuota
+            recibo.estado_pago = "pendiente"
+
+    # 2. Si hay recibos pendientes fuera de estos N meses requeridos, marcarlos pagados
+    sobrantes = db.query(Recibo).filter(
+        Recibo.apartamento_id == apto.id,
+        Recibo.estado_pago != "pagado",
+        ~Recibo.mes_periodo.in_(periodos_requeridos)
+    ).all()
+    for r in sobrantes:
+        r.estado_pago = "pagado"
+        r.monto_pendiente_usd = Decimal("0.00")
+
+
+def sincronizar_recibos_todos_apartamentos(db: Session):
+    """Sincroniza los recibos de todos los apartamentos según su campo meses_pendientes."""
+    apartamentos = db.query(Apartamento).all()
+    for apto in apartamentos:
+        sincronizar_recibos_segun_meses_pendientes(db, apto)
+    db.commit()
+
+
