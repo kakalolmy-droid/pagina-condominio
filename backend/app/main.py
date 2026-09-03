@@ -22,22 +22,18 @@ def auto_seed_database():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        # Migración segura de columnas 'activo' y 'meses_pendientes'
-        with engine.begin() as conn:
+        # Migraciones seguras independientes para PostgreSQL y SQLite
+        migraciones = [
+            "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT true;",
+            "ALTER TABLE apartamentos ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT true;",
+            "ALTER TABLE apartamentos ADD COLUMN IF NOT EXISTS meses_pendientes INTEGER DEFAULT 1;",
+            "ALTER TABLE pagos ALTER COLUMN comprobante_url TYPE TEXT;",
+        ]
+        for sql in migraciones:
             try:
-                conn.execute(text("ALTER TABLE usuarios ADD COLUMN activo BOOLEAN DEFAULT 1"))
-            except Exception:
-                pass
-            try:
-                conn.execute(text("ALTER TABLE apartamentos ADD COLUMN activo BOOLEAN DEFAULT 1"))
-            except Exception:
-                pass
-            try:
-                conn.execute(text("ALTER TABLE apartamentos ADD COLUMN meses_pendientes INTEGER DEFAULT 1"))
-            except Exception:
-                pass
-            try:
-                conn.execute(text("ALTER TABLE pagos ALTER COLUMN comprobante_url TYPE TEXT"))
+                with engine.connect() as conn:
+                    conn.execute(text(sql))
+                    conn.commit()
             except Exception:
                 pass
 

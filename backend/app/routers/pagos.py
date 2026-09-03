@@ -72,6 +72,13 @@ async def reportar_pago(
 
         comprobante_url = await subir_comprobante(comprobante, apto.id)
 
+        try:
+            from sqlalchemy import text
+            db.execute(text("ALTER TABLE pagos ALTER COLUMN comprobante_url TYPE TEXT;"))
+            db.commit()
+        except Exception:
+            pass
+
         pago = Pago(
             apartamento_id=apto.id,
             recibo_id=recibo_id,
