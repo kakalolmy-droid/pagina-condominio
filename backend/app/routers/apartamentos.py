@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+from decimal import Decimal
 from app.database import get_db
 from app.models.apartamento import Apartamento
 from app.schemas.apartamento import ApartamentoCreate, ApartamentoUpdate, ApartamentoOut
@@ -46,8 +47,8 @@ def crear_apartamento(
     db: Session = Depends(get_db),
     _=Depends(require_admin),
 ):
-    if not (0 < float(data.alicuota) <= 1):
-        raise HTTPException(status_code=400, detail="La alícuota debe estar entre 0 y 1 (ej: 0.025 = 2.5%)")
+    if float(data.alicuota) < 0:
+        raise HTTPException(status_code=400, detail="La cuota fija mensual debe ser mayor o igual a 0")
 
     apto = Apartamento(**data.model_dump())
     db.add(apto)
@@ -73,6 +74,22 @@ def actualizar_apartamento(
     return apto
 
 
+@router.patch("/{apartamento_id}/toggle-activo", response_model=ApartamentoOut)
+def alternar_estado_apartamento(
+    apartamento_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    """Activa o desactiva el apartamento (para omitir notificaciones/avisos)."""
+    apto = db.query(Apartamento).filter(Apartamento.id == apartamento_id).first()
+    if not apto:
+        raise HTTPException(status_code=404, detail="Apartamento no encontrado")
+    apto.activo = not bool(apto.activo)
+    db.commit()
+    db.refresh(apto)
+    return apto
+
+
 @router.delete("/{apartamento_id}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_apartamento(
     apartamento_id: int,
@@ -91,12 +108,14 @@ def verificar_suma_alicuotas(
     db: Session = Depends(get_db),
     _=Depends(require_admin),
 ):
-    """Verifica que la suma de todas las alícuotas sea igual a 1 (100%)."""
+    """Retorna el resumen de cuotas fijas mensuales de todos los apartamentos."""
     aptos = db.query(Apartamento).all()
-    total = sum(float(a.alicuota) for a in aptos)
+    activos = [a for a in aptos if a.activo]
+    total_recaudacion_esperada = sum(float(a.alicuota or 0) for a in activos)
     return {
         "total_apartamentos": len(aptos),
-        "suma_alicuotas": round(total, 6),
-        "es_valida": abs(total - 1.0) < 0.0001,
-        "diferencia": round(1.0 - total, 6),
+        "apartamentos_activos": len(activos),
+        "suma_cuotas_usd": round(total_recaudacion_esperada, 2),
+        "promedio_cuota_usd": round(total_recaudacion_esperada / len(activos), 2) if activos else 0,
+        "es_valida": True,
     }

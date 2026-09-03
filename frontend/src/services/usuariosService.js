@@ -13,6 +13,9 @@ export const usuariosService = {
   actualizar: (id, data) =>
     api.put(`/usuarios/${id}`, data),
 
+  toggleActivo: (id) =>
+    api.patch(`/usuarios/${id}/toggle-activo`),
+
   eliminar: (id) =>
     api.delete(`/usuarios/${id}`),
 }

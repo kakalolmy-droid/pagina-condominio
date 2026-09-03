@@ -13,6 +13,9 @@ export const apartamentosService = {
   actualizar: (id, data) =>
     api.put(`/apartamentos/${id}`, data),
 
+  toggleActivo: (id) =>
+    api.patch(`/apartamentos/${id}/toggle-activo`),
+
   eliminar: (id) =>
     api.delete(`/apartamentos/${id}`),
 

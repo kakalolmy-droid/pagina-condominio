@@ -9,6 +9,7 @@ class UsuarioBase(BaseModel):
     telefono_whatsapp: str
     email: EmailStr
     rol: str = "propietario"
+    activo: bool = True
 
 class UsuarioCreate(UsuarioBase):
     password: str
@@ -16,10 +17,12 @@ class UsuarioCreate(UsuarioBase):
 class UsuarioUpdate(BaseModel):
     nombre: Optional[str] = None
     apellido: Optional[str] = None
+    cedula: Optional[str] = None
     telefono_whatsapp: Optional[str] = None
     email: Optional[EmailStr] = None
     rol: Optional[str] = None
     password: Optional[str] = None
+    activo: Optional[bool] = None
 
 class UsuarioSimple(BaseModel):
     id: int
@@ -27,6 +30,7 @@ class UsuarioSimple(BaseModel):
     apellido: str
     email: str
     rol: str
+    activo: bool = True
     class Config:
         from_attributes = True
 

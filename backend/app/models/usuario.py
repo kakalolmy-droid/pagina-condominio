@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, func
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, func
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -14,6 +14,7 @@ class Usuario(Base):
     email = Column(String(120), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     rol = Column(String(20), default="propietario")  # admin | junta | propietario
+    activo = Column(Boolean, default=True)  # Si está inactivo, no puede entrar ni recibe notificaciones
     fecha_registro = Column(DateTime, server_default=func.now())
 
     # Relaciones

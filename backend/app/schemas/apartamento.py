@@ -7,8 +7,9 @@ class ApartamentoBase(BaseModel):
     numero_apto: str
     piso: Optional[str] = None
     torre: str = "Principal"
-    alicuota: Decimal
-    propietario_id: int
+    alicuota: Decimal = Decimal("15.00")  # Cuota fija mensual en USD (ej: $15.00)
+    activo: bool = True
+    propietario_id: Optional[int] = None
 
 class ApartamentoCreate(ApartamentoBase):
     pass
@@ -18,6 +19,7 @@ class ApartamentoUpdate(BaseModel):
     piso: Optional[str] = None
     torre: Optional[str] = None
     alicuota: Optional[Decimal] = None
+    activo: Optional[bool] = None
     propietario_id: Optional[int] = None
 
 class ApartamentoOut(ApartamentoBase):

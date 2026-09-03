@@ -1,5 +1,5 @@
 """
-Servicio financiero: cálculo de cuotas por alícuota,
+Servicio financiero: cálculo de cuotas por cuota fija / alícuota,
 emisión masiva de recibos y construcción de la matriz de deudas.
 """
 from decimal import Decimal
@@ -11,22 +11,21 @@ from app.services.bcv_scraper import obtener_tasa_actual
 from app.schemas.recibo import EmisionMasivaRequest
 
 
-def calcular_cuota(gasto_total_usd: Decimal, alicuota: Decimal) -> Decimal:
-    """Calcula la cuota de un apartamento según su alícuota."""
-    return round(gasto_total_usd * alicuota, 2)
-
-
 def emitir_recibos_mes(db: Session, request: EmisionMasivaRequest) -> list[Recibo]:
     """
-    Emite un recibo por cada apartamento para el período indicado.
+    Emite un recibo por cada apartamento ACTIVO para el período indicado.
     Si ya existe un recibo para ese período y apartamento, lo omite.
     """
-    apartamentos = db.query(Apartamento).all()
+    apartamentos = db.query(Apartamento).filter(Apartamento.activo == True).all()
     recibos_emitidos = []
     hoy = date.today()
     vencimiento = hoy + timedelta(days=request.dias_vencimiento)
 
     for apto in apartamentos:
+        # Si el propietario está inactivo, omitir emisión
+        if apto.propietario and not apto.propietario.activo:
+            continue
+
         existente = db.query(Recibo).filter(
             Recibo.apartamento_id == apto.id,
             Recibo.mes_periodo == request.periodo,
@@ -34,7 +33,10 @@ def emitir_recibos_mes(db: Session, request: EmisionMasivaRequest) -> list[Recib
         if existente:
             continue
 
-        monto = calcular_cuota(request.gasto_total_usd, apto.alicuota)
+        # Usa la cuota mensual fija configurada en el apartamento (ej: $15.00)
+        # o el monto enviado en el request si se especificó
+        monto = Decimal(str(apto.alicuota)) if (apto.alicuota and apto.alicuota > 0) else Decimal(str(request.gasto_total_usd))
+        
         recibo = Recibo(
             apartamento_id=apto.id,
             mes_periodo=request.periodo,
@@ -84,6 +86,8 @@ def obtener_matriz_deudas(db: Session) -> list[dict]:
             "numero_apto": apto.numero_apto,
             "piso": apto.piso,
             "torre": apto.torre,
+            "cuota_mensual_usd": float(apto.alicuota or 15.0),
+            "activo": bool(apto.activo),
             "propietario": f"{apto.propietario.nombre} {apto.propietario.apellido}" if apto.propietario else "-",
             "telefono": apto.propietario.telefono_whatsapp if apto.propietario else "-",
             "email": apto.propietario.email if apto.propietario else "-",

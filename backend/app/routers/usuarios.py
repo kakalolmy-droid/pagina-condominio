@@ -56,6 +56,7 @@ def crear_usuario(
         email=data.email,
         password_hash=hashear_password(data.password),
         rol=data.rol,
+        activo=data.activo,
     )
     db.add(nuevo)
     db.commit()
@@ -80,6 +81,22 @@ def actualizar_usuario(
     for campo, valor in update_data.items():
         setattr(usuario, campo, valor)
 
+    db.commit()
+    db.refresh(usuario)
+    return usuario
+
+
+@router.patch("/{usuario_id}/toggle-activo", response_model=UsuarioOut)
+def alternar_estado_usuario(
+    usuario_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    """Activa o desactiva a un usuario sin borrar sus datos históricos."""
+    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    usuario.activo = not bool(usuario.activo)
     db.commit()
     db.refresh(usuario)
     return usuario

@@ -1,7 +1,7 @@
 <template>
   <AdminLayout
     titulo="Padrón de Propietarios"
-    subtitulo="Gestión de copropietarios, datos de contacto y accesos"
+    subtitulo="Gestión de copropietarios, datos de contacto, estados y accesos"
   >
     <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
       <!-- Buscador -->
@@ -31,6 +31,7 @@
               <th class="pb-3 font-semibold">WhatsApp / Teléfono</th>
               <th class="pb-3 font-semibold">Correo Electrónico</th>
               <th class="pb-3 font-semibold text-center">Rol</th>
+              <th class="pb-3 font-semibold text-center">Estado</th>
               <th class="pb-3 font-semibold text-center">Acciones</th>
             </tr>
           </thead>
@@ -39,6 +40,7 @@
               v-for="usuario in usuariosFiltrados"
               :key="usuario.id"
               class="border-b border-neu-bg-dark hover:bg-neu-bg-dark/50 transition-colors"
+              :class="{ 'opacity-60 bg-neu-bg-dark/30': !usuario.activo }"
             >
               <td class="py-3 font-semibold text-neu-green">
                 {{ usuario.nombre }} {{ usuario.apellido }}
@@ -60,18 +62,36 @@
                 </span>
               </td>
               <td class="py-3 text-center">
+                <span
+                  class="text-xs font-bold px-3 py-1 rounded-full inline-block"
+                  :class="usuario.activo ? 'badge-success' : 'badge-danger'"
+                >
+                  {{ usuario.activo ? '● Activo' : '○ Desactivado' }}
+                </span>
+              </td>
+              <td class="py-3 text-center">
                 <div class="flex items-center justify-center gap-2">
+                  <!-- Botón Desactivar / Reactivar Propietario -->
+                  <button
+                    @click="alternarEstado(usuario)"
+                    class="px-2.5 py-1.5 rounded-neu-sm text-xs font-bold shadow-neu-sm hover:shadow-neu-inset transition-all cursor-pointer flex items-center gap-1"
+                    :class="usuario.activo ? 'bg-amber-600 text-white' : 'bg-emerald-700 text-white'"
+                    :title="usuario.activo ? 'Desactivar usuario para que no reciba avisos ni pueda ingresar' : 'Reactivar usuario'"
+                  >
+                    <span>{{ usuario.activo ? '⏸️ Desactivar' : '▶️ Reactivar' }}</span>
+                  </button>
+
                   <button
                     @click="abrirModalEditar(usuario)"
                     class="p-2 rounded-neu-sm hover:shadow-neu-inset text-neu-green transition-all"
-                    title="Editar"
+                    title="Editar Datos"
                   >
                     ✏️
                   </button>
                   <button
                     @click="confirmarEliminacion(usuario)"
                     class="p-2 rounded-neu-sm hover:shadow-neu-inset text-neu-danger transition-all"
-                    title="Eliminar"
+                    title="Eliminar de la Base de Datos"
                   >
                     🗑️
                   </button>
@@ -79,7 +99,7 @@
               </td>
             </tr>
             <tr v-if="usuariosFiltrados.length === 0">
-              <td colspan="6" class="py-8 text-center text-neu-text-light">
+              <td colspan="7" class="py-8 text-center text-neu-text-light">
                 No se encontraron propietarios registrados.
               </td>
             </tr>
@@ -143,13 +163,22 @@
           :required="!editandoId"
         />
 
-        <div class="flex flex-col gap-1">
-          <label class="text-sm font-medium text-neu-text-light">Rol en el Condominio</label>
-          <select v-model="form.rol" class="input-neu">
-            <option value="propietario">Propietario</option>
-            <option value="junta">Miembro de la Junta</option>
-            <option value="admin">Administrador Principal</option>
-          </select>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium text-neu-text-light">Rol en el Condominio</label>
+            <select v-model="form.rol" class="input-neu">
+              <option value="propietario">Propietario</option>
+              <option value="junta">Miembro de la Junta</option>
+              <option value="admin">Administrador Principal</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-2 p-3 bg-neu-bg-dark rounded-neu-sm border border-neu-shadow-dark mt-4">
+            <input type="checkbox" id="user_activo" v-model="form.activo" class="w-4 h-4 cursor-pointer accent-neu-green" />
+            <label for="user_activo" class="text-xs font-semibold text-neu-text cursor-pointer">
+              Usuario Activo en el Sistema
+            </label>
+          </div>
         </div>
 
         <div class="flex justify-end gap-3 mt-4">
@@ -171,6 +200,7 @@ import { useToast } from 'vue-toastification'
 import { AdminLayout } from '@/components/layout'
 import { NeuCard, NeuButton, NeuInput, NeuModal } from '@/components/neumorph'
 import { useUsuariosStore } from '@/stores'
+import { usuariosService } from '@/services'
 
 const toast = useToast()
 const usuariosStore = useUsuariosStore()
@@ -188,6 +218,7 @@ const form = ref({
   email: '',
   password: '',
   rol: 'propietario',
+  activo: true,
 })
 
 const usuariosFiltrados = computed(() => {
@@ -217,6 +248,7 @@ function abrirModalCrear() {
     email: '',
     password: '',
     rol: 'propietario',
+    activo: true,
   }
   modalAbierto.value = true
 }
@@ -231,8 +263,19 @@ function abrirModalEditar(usuario) {
     email: usuario.email,
     password: '',
     rol: usuario.rol,
+    activo: usuario.activo !== false,
   }
   modalAbierto.value = true
+}
+
+async function alternarEstado(usuario) {
+  try {
+    await usuariosService.toggleActivo(usuario.id)
+    usuario.activo = !usuario.activo
+    toast.info(usuario.activo ? `Propietario ${usuario.nombre} reactivado` : `Propietario ${usuario.nombre} desactivado (no recibirá avisos)`)
+  } catch (error) {
+    toast.error('Error al cambiar el estado del usuario')
+  }
 }
 
 async function guardarPropietario() {
@@ -246,6 +289,7 @@ async function guardarPropietario() {
       toast.success('Propietario registrado con éxito')
     }
     modalAbierto.value = false
+    await usuariosStore.cargar()
   } catch (error) {
     toast.error(error.response?.data?.detail || 'Error al guardar el propietario')
   } finally {
@@ -254,7 +298,7 @@ async function guardarPropietario() {
 }
 
 async function confirmarEliminacion(usuario) {
-  if (confirm(`¿Está seguro de eliminar al propietario ${usuario.nombre} ${usuario.apellido}?`)) {
+  if (confirm(`¿Está seguro de eliminar al propietario ${usuario.nombre} ${usuario.apellido}? (Se sugiere usar 'Desactivar' para conservar su historial)`)) {
     try {
       await usuariosStore.eliminar(usuario.id)
       toast.success('Propietario eliminado')

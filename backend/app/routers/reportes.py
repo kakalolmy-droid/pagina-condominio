@@ -57,7 +57,7 @@ async def enviar_masivo_automatico(
 ):
     """
     Envía DIRECTA y AUTOMÁTICAMENTE a todos los teléfonos vinculados por WhatsApp
-    con toda la información de recaudación y link de pago.
+    con toda la información de recaudación y link de pago (SOLO APARTAMENTOS Y USUARIOS ACTIVOS).
     """
     tasa = obtener_tasa_actual(db)
     tasa_valor = float(tasa.tasa_usd_ves)
@@ -66,16 +66,22 @@ async def enviar_masivo_automatico(
     pago_movil = payload.pago_movil or settings.condominio_pago_movil or "0414-1234567 | C.I. V-00000001"
     transferencia = payload.transferencia or settings.condominio_cuenta or "0102-0000-00-0000000000"
     zelle = payload.zelle or "pagos@edificioalcatraz.com"
-    portal_url = "http://localhost:5173/mi-cuenta/pagar"
+    portal_url = "https://pagina-condominio.vercel.app/mi-cuenta/pagar"
 
-    aptos = db.query(Apartamento).filter(Apartamento.propietario_id != None).all()
+    # Filtrar solo apartamentos ACTIVOS
+    aptos = db.query(Apartamento).filter(
+        Apartamento.propietario_id != None,
+        Apartamento.activo == True
+    ).all()
+    
     enviados_exitosos = []
     errores = []
 
     async with httpx.AsyncClient(timeout=15.0) as client:
         for apto in aptos:
             p = apto.propietario
-            if not p or not p.telefono_whatsapp:
+            # Si el propietario está marcado como INACTIVO o no tiene teléfono, no se le envía nada
+            if not p or not p.activo or not p.telefono_whatsapp:
                 continue
 
             recibo = (
@@ -90,7 +96,7 @@ async def enviar_masivo_automatico(
             if recibo:
                 monto_usd = float(recibo.monto_pendiente_usd)
             else:
-                monto_usd = float(apto.alicuota) * 1000.0
+                monto_usd = float(apto.alicuota or 15.00)
 
             monto_ves = round(monto_usd * tasa_valor, 2)
 
@@ -129,7 +135,7 @@ async def enviar_masivo_automatico(
 
     return {
         "status": "enviado",
-        "mensaje": f"¡Avisos de WhatsApp enviados con éxito a {len(enviados_exitosos)} propietarios vinculados!",
+        "mensaje": f"¡Avisos de WhatsApp enviados con éxito a {len(enviados_exitosos)} propietarios activos!",
         "total_destinatarios": len(enviados_exitosos),
         "destinatarios": enviados_exitosos,
         "errores": errores,
