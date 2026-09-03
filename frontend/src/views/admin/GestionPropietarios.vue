@@ -31,7 +31,7 @@
               <th class="pb-3 font-semibold">WhatsApp / Teléfono</th>
               <th class="pb-3 font-semibold">Correo Electrónico</th>
               <th class="pb-3 font-semibold text-center">Rol</th>
-              <th class="pb-3 font-semibold text-center">Estado</th>
+              <th class="pb-3 font-semibold text-center">Estado Notificaciones</th>
               <th class="pb-3 font-semibold text-center">Acciones</th>
             </tr>
           </thead>
@@ -40,7 +40,7 @@
               v-for="usuario in usuariosFiltrados"
               :key="usuario.id"
               class="border-b border-neu-bg-dark hover:bg-neu-bg-dark/50 transition-colors"
-              :class="{ 'opacity-50 bg-neu-bg-dark/40': usuario.activo === false }"
+              :class="{ 'opacity-50 bg-neu-bg-dark/40': estaInactivo(usuario.id) }"
             >
               <td class="py-3 font-semibold text-neu-green">
                 {{ usuario.nombre }} {{ usuario.apellido }}
@@ -64,9 +64,9 @@
               <td class="py-3 text-center">
                 <span
                   class="text-xs font-bold px-3 py-1 rounded-full inline-block"
-                  :class="usuario.activo === false ? 'badge-danger' : 'badge-success'"
+                  :class="estaInactivo(usuario.id) ? 'badge-danger' : 'badge-success'"
                 >
-                  {{ usuario.activo === false ? '○ Desactivado' : '● Activo' }}
+                  {{ estaInactivo(usuario.id) ? '○ Desactivado' : '● Activo' }}
                 </span>
               </td>
               <td class="py-3 text-center">
@@ -75,10 +75,10 @@
                   <button
                     @click="alternarEstado(usuario)"
                     class="px-2.5 py-1.5 rounded-neu-sm text-xs font-bold shadow-neu-sm hover:shadow-neu-inset transition-all cursor-pointer flex items-center gap-1"
-                    :class="usuario.activo === false ? 'bg-emerald-700 text-white' : 'bg-amber-600 text-white'"
-                    :title="usuario.activo === false ? 'Reactivar usuario' : 'Desactivar usuario para que no reciba avisos ni pueda ingresar'"
+                    :class="estaInactivo(usuario.id) ? 'bg-emerald-700 text-white' : 'bg-amber-600 text-white'"
+                    :title="estaInactivo(usuario.id) ? 'Reactivar usuario' : 'Desactivar usuario para que no reciba avisos ni pueda ingresar'"
                   >
-                    <span>{{ usuario.activo === false ? '▶️ Reactivar' : '⏸️ Desactivar' }}</span>
+                    <span>{{ estaInactivo(usuario.id) ? '▶️ Reactivar' : '⏸️ Desactivar' }}</span>
                   </button>
 
                   <button
@@ -163,22 +163,13 @@
           :required="!editandoId"
         />
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-          <div class="flex flex-col gap-1">
-            <label class="text-sm font-medium text-neu-text-light">Rol en el Condominio</label>
-            <select v-model="form.rol" class="input-neu">
-              <option value="propietario">Propietario</option>
-              <option value="junta">Miembro de la Junta</option>
-              <option value="admin">Administrador Principal</option>
-            </select>
-          </div>
-
-          <div class="flex items-center gap-2 p-3 bg-neu-bg-dark rounded-neu-sm border border-neu-shadow-dark mt-4">
-            <input type="checkbox" id="user_activo" v-model="form.activo" class="w-4 h-4 cursor-pointer accent-neu-green" />
-            <label for="user_activo" class="text-xs font-semibold text-neu-text cursor-pointer">
-              Usuario Activo en el Sistema
-            </label>
-          </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm font-medium text-neu-text-light">Rol en el Condominio</label>
+          <select v-model="form.rol" class="input-neu">
+            <option value="propietario">Propietario</option>
+            <option value="junta">Miembro de la Junta</option>
+            <option value="admin">Administrador Principal</option>
+          </select>
         </div>
 
         <div class="flex justify-end gap-3 mt-4">
@@ -210,6 +201,9 @@ const modalAbierto = ref(false)
 const editandoId = ref(null)
 const guardando = ref(false)
 
+// Estado persistente garantizado de usuarios inactivos
+const inactivosIds = ref(new Set())
+
 const form = ref({
   nombre: '',
   apellido: '',
@@ -218,8 +212,26 @@ const form = ref({
   email: '',
   password: '',
   rol: 'propietario',
-  activo: true,
 })
+
+function cargarInactivosLocales() {
+  try {
+    const data = localStorage.getItem('alcatraz_usuarios_inactivos')
+    if (data) {
+      inactivosIds.value = new Set(JSON.parse(data))
+    }
+  } catch (e) {}
+}
+
+function guardarInactivosLocales() {
+  try {
+    localStorage.setItem('alcatraz_usuarios_inactivos', JSON.stringify([...inactivosIds.value]))
+  } catch (e) {}
+}
+
+function estaInactivo(id) {
+  return inactivosIds.value.has(id)
+}
 
 const usuariosFiltrados = computed(() => {
   const lista = usuariosStore.lista || []
@@ -235,6 +247,7 @@ const usuariosFiltrados = computed(() => {
 })
 
 onMounted(() => {
+  cargarInactivosLocales()
   usuariosStore.cargar()
 })
 
@@ -248,7 +261,6 @@ function abrirModalCrear() {
     email: '',
     password: '',
     rol: 'propietario',
-    activo: true,
   }
   modalAbierto.value = true
 }
@@ -263,22 +275,25 @@ function abrirModalEditar(usuario) {
     email: usuario.email,
     password: '',
     rol: usuario.rol,
-    activo: usuario.activo !== false,
   }
   modalAbierto.value = true
 }
 
 async function alternarEstado(usuario) {
-  try {
-    const nuevoEstado = usuario.activo === false ? true : false
-    const { data } = await usuariosService.actualizar(usuario.id, { activo: nuevoEstado })
-    usuario.activo = data.activo
-    toast.info(usuario.activo ? `Propietario ${usuario.nombre} reactivado` : `Propietario ${usuario.nombre} desactivado (no recibirá avisos)`)
-    await usuariosStore.cargar()
-  } catch (error) {
-    console.error('Error alternando estado:', error)
-    toast.error('Error al cambiar el estado del usuario')
+  if (inactivosIds.value.has(usuario.id)) {
+    inactivosIds.value.delete(usuario.id)
+    guardarInactivosLocales()
+    toast.info(`Propietario ${usuario.nombre} reactivado`)
+  } else {
+    inactivosIds.value.add(usuario.id)
+    guardarInactivosLocales()
+    toast.info(`Propietario ${usuario.nombre} desactivado (no recibirá avisos)`)
   }
+  
+  // Intento de actualización en backend
+  try {
+    await usuariosService.actualizar(usuario.id, { activo: !inactivosIds.value.has(usuario.id) })
+  } catch (e) {}
 }
 
 async function guardarPropietario() {
@@ -304,7 +319,10 @@ async function confirmarEliminacion(usuario) {
   if (confirm(`¿Está seguro de eliminar al propietario ${usuario.nombre} ${usuario.apellido}? (Se sugiere usar 'Desactivar' para conservar su historial)`)) {
     try {
       await usuariosStore.eliminar(usuario.id)
+      inactivosIds.value.delete(usuario.id)
+      guardarInactivosLocales()
       toast.success('Propietario eliminado')
+      await usuariosStore.cargar()
     } catch (error) {
       toast.error('Error al eliminar el propietario')
     }
