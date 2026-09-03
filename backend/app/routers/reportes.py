@@ -60,6 +60,25 @@ async def enviar_masivo_automatico(
     Envía DIRECTA y AUTOMÁTICAMENTE a todos los teléfonos vinculados por WhatsApp
     con toda la información de recaudación, cuota, meses pendientes y total a pagar.
     """
+    # 1. Validar estrictamente que la línea de WhatsApp del condominio esté vinculada
+    try:
+        async with httpx.AsyncClient(timeout=4.0) as client:
+            status_res = await client.get(f"{WPP_SERVICE_URL}/status")
+            bot_data = status_res.json() if status_res.status_code == 200 else {}
+            if not bot_data.get("connected", False):
+                raise HTTPException(
+                    status_code=400,
+                    detail="⚠️ No se pueden enviar los avisos: La línea oficial de WhatsApp del condominio no está vinculada. Por favor escanea el código QR o vincula tu número arriba primero.",
+                )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verificando estado de WhatsApp: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail="⚠️ La línea oficial de WhatsApp no se encuentra disponible o no está vinculada. Por favor vincula tu número de WhatsApp arriba primero.",
+        )
+
     try:
         tasa = await actualizar_tasa_bcv(db)
     except Exception as e:
@@ -148,6 +167,13 @@ async def enviar_masivo_automatico(
                     errores.append(f"{p.nombre}: {res.text}")
             except Exception as e:
                 errores.append(f"{p.nombre}: {str(e)}")
+
+    if len(enviados_exitosos) == 0:
+        detalle = errores[0] if errores else "No se encontraron propietarios activos con número de WhatsApp registrado para notificar."
+        raise HTTPException(
+            status_code=400,
+            detail=f"No se pudo enviar ningún aviso: {detalle}",
+        )
 
     return {
         "status": "enviado",

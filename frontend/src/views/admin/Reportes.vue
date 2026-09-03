@@ -174,6 +174,20 @@
           placeholder="Ej. Recordamos que a partir del día 15 se genera recargo por mora."
         />
 
+        <!-- Advertencia si la línea de WhatsApp no está vinculada -->
+        <div
+          v-if="!botEstado.connected"
+          class="p-3 bg-amber-500/10 border border-amber-500/40 rounded-neu-sm text-xs text-amber-300 flex items-center gap-2.5"
+        >
+          <span class="text-xl">⚠️</span>
+          <div>
+            <p class="font-bold">Línea de WhatsApp pendiente de vinculación</p>
+            <p class="text-neu-text-light mt-0.5">
+              No se pueden enviar avisos automáticos porque la línea no está conectada. Escanea el código QR o ingresa tu número arriba para vincular tu WhatsApp primero.
+            </p>
+          </div>
+        </div>
+
         <div class="flex flex-col sm:flex-row justify-end gap-3 mt-2">
           <NeuButton
             type="button"
@@ -183,7 +197,13 @@
           >
             💾 Guardar como Datos Predeterminados
           </NeuButton>
-          <NeuButton variant="primary" type="submit" :loading="enviando">
+          <NeuButton
+            variant="primary"
+            type="submit"
+            :loading="enviando"
+            :disabled="!botEstado.connected"
+            :class="!botEstado.connected ? 'opacity-50 cursor-not-allowed' : ''"
+          >
             📲 Enviar Automáticamente a Todos los Números Vinculados
           </NeuButton>
         </div>
@@ -398,6 +418,11 @@ async function desvincularNumero() {
 }
 
 async function enviarMasivo() {
+  if (!botEstado.value.connected) {
+    toast.error('⚠️ No se pueden enviar los avisos: La línea oficial de WhatsApp no está vinculada. Por favor escanea el código QR o vincula tu número arriba primero.')
+    return
+  }
+
   enviando.value = true
   resultadoEnvio.value = null
   try {
@@ -407,7 +432,8 @@ async function enviarMasivo() {
     toast.success(data.mensaje)
   } catch (error) {
     console.error('Error al enviar avisos:', error)
-    toast.error('Error al enviar los avisos masivos: Verifique que WhatsApp esté vinculado')
+    const detalle = error.response?.data?.detail || 'Error al enviar los avisos masivos: Verifique que la línea de WhatsApp esté vinculada y los números sean válidos'
+    toast.error(detalle)
   } finally {
     enviando.value = false
   }
