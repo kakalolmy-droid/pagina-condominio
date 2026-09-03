@@ -432,14 +432,14 @@ async function confirmarEliminacion(apto) {
 
 async function simularAvanceMes() {
   const confirmacion = confirm(
-    "¿Deseas simular el avance al siguiente mes?\n\nEsto sumará automáticamente 1 mes de cuota ($15.00) a todos los apartamentos activos para verificar la actualización de deudas."
+    "¿Deseas simular el avance al siguiente mes?\n\nEsto generará automáticamente los nuevos recibos oficiales del período y sumará 1 mes de cuota pendiente a todos los apartamentos activos."
   )
   if (!confirmacion) return
 
   simulando.value = true
   try {
     const res = await apartamentosService.simularAvanceMes()
-    toast.success(res.data?.mensaje || "¡Mes avanzado con éxito! Deudas actualizadas.")
+    toast.success(res.data?.mensaje || "¡Mes avanzado con éxito! Recibos y deudas actualizados.")
     seHaSimulado.value = true
     await aptosStore.cargar()
   } catch (e) {

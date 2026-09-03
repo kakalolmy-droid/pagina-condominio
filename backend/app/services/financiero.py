@@ -53,6 +53,7 @@ def emitir_recibos_mes(db: Session, request: EmisionMasivaRequest) -> list[Recib
         )
         db.add(recibo)
         recibos_emitidos.append(recibo)
+        apto.meses_pendientes = (apto.meses_pendientes or 0) + 1
 
     db.commit()
     for r in recibos_emitidos:

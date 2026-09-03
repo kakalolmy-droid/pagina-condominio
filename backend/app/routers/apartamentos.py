@@ -3,8 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from decimal import Decimal
+from datetime import date, timedelta
 from app.database import get_db
 from app.models.apartamento import Apartamento
+from app.models.recibo import Recibo
 from app.schemas.apartamento import ApartamentoCreate, ApartamentoUpdate, ApartamentoOut
 from app.services.financiero import obtener_matriz_deudas
 from app.auth.dependencies import require_admin
@@ -134,23 +136,65 @@ def simular_avance_mes(
     _=Depends(require_admin),
 ):
     """
-    Simula el paso a un nuevo mes de facturación.
-    Incrementa +1 mes de deuda a todos los apartamentos activos
-    y recalcula las deudas del condominio.
+    Simula el paso a un nuevo mes de facturación:
+    1. Calcula el siguiente período YYYY-MM.
+    2. Emite el recibo oficial correspondiente para cada apartamento activo.
+    3. Incrementa +1 mes de deuda (meses_pendientes) en cada inmueble activo.
     """
-    apartamentos = db.query(Apartamento).filter(Apartamento.activo == True).all()
+    # 1. Determinar el siguiente período a partir del último recibo existente
+    ultimo_recibo = db.query(Recibo).order_by(Recibo.mes_periodo.desc()).first()
+    if ultimo_recibo and ultimo_recibo.mes_periodo:
+        try:
+            parts = ultimo_recibo.mes_periodo.split("-")
+            year, month = int(parts[0]), int(parts[1])
+            if month == 12:
+                next_periodo = f"{year + 1:04d}-01"
+            else:
+                next_periodo = f"{year:04d}-{month + 1:02d}"
+        except Exception:
+            next_periodo = "2026-10"
+    else:
+        next_periodo = "2026-10"
+
+    apartamentos = db.query(Apartamento).all()
     actualizados = 0
+    hoy = date.today()
+    vencimiento = hoy + timedelta(days=15)
 
     for apto in apartamentos:
-        if apto.propietario and not apto.propietario.activo:
+        # Omitir cualquier apartamento o propietario desactivado
+        if not apto.activo or apto.activo in (0, "0", False, "false"):
+            continue
+        if apto.propietario and (not apto.propietario.activo or apto.propietario.activo in (0, "0", False, "false")):
             continue
 
         apto.meses_pendientes = (apto.meses_pendientes or 0) + 1
+
+        # Crear el recibo para este nuevo período si no existe ya
+        recibo_existente = db.query(Recibo).filter(
+            Recibo.apartamento_id == apto.id,
+            Recibo.mes_periodo == next_periodo
+        ).first()
+
+        if not recibo_existente:
+            monto = Decimal(str(apto.alicuota or 15.00))
+            nuevo_recibo = Recibo(
+                apartamento_id=apto.id,
+                mes_periodo=next_periodo,
+                monto_total_usd=monto,
+                monto_pendiente_usd=monto,
+                estado_pago="pendiente",
+                fecha_emision=hoy,
+                fecha_vencimiento=vencimiento,
+            )
+            db.add(nuevo_recibo)
+
         actualizados += 1
 
     db.commit()
     return {
-        "mensaje": f"Se ha simulado el avance al siguiente mes. {actualizados} apartamentos activos recibieron +1 mes de cuota.",
+        "mensaje": f"Se ha avanzado al período {next_periodo}. Se generaron los nuevos recibos y se sumó +1 mes a {actualizados} apartamentos activos.",
+        "periodo_generado": next_periodo,
         "apartamentos_actualizados": actualizados,
     }
 
@@ -161,22 +205,39 @@ def revertir_mes(
     _=Depends(require_admin),
 ):
     """
-    Resta 1 mes de deuda a los apartamentos activos que tengan al menos 1 mes pendiente.
-    Permite deshacer la simulación.
+    Deshace la simulación:
+    1. Resta 1 mes de deuda a los apartamentos activos.
+    2. Elimina los recibos del último período simulado.
     """
-    apartamentos = db.query(Apartamento).filter(Apartamento.activo == True).all()
+    ultimo_recibo = db.query(Recibo).order_by(Recibo.mes_periodo.desc()).first()
+    ultimo_periodo = ultimo_recibo.mes_periodo if ultimo_recibo else None
+
+    apartamentos = db.query(Apartamento).all()
     actualizados = 0
 
     for apto in apartamentos:
-        if apto.propietario and not apto.propietario.activo:
+        if not apto.activo or apto.activo in (0, "0", False, "false"):
             continue
+        if apto.propietario and (not apto.propietario.activo or apto.propietario.activo in (0, "0", False, "false")):
+            continue
+
         if apto.meses_pendientes and apto.meses_pendientes > 0:
             apto.meses_pendientes -= 1
             actualizados += 1
 
+        if ultimo_periodo:
+            recibo_borrar = db.query(Recibo).filter(
+                Recibo.apartamento_id == apto.id,
+                Recibo.mes_periodo == ultimo_periodo,
+                Recibo.estado_pago == "pendiente"
+            ).first()
+            if recibo_borrar:
+                db.delete(recibo_borrar)
+
     db.commit()
     return {
-        "mensaje": f"Se ha revertido 1 mes de cuota a {actualizados} apartamentos activos.",
+        "mensaje": f"Se ha revertido el período {ultimo_periodo or ''}. Recibos y meses actualizados para {actualizados} apartamentos.",
         "apartamentos_actualizados": actualizados,
     }
+
 
