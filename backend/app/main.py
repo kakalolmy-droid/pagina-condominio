@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy import text
@@ -148,6 +149,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    error_trace = traceback.format_exc()
+    print("GLOBAL EXCEPTION:", error_trace)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Error del servidor: {str(exc)}", "trace": error_trace.splitlines()[-4:]},
+    )
 
 # ─── ROUTERS ─────────────────────────────────────────────────────
 app.include_router(auth.router)           # /api/auth/
