@@ -41,61 +41,70 @@ def aprobar_pago(
     2. Acredita excedente al saldo a favor del apartamento
     3. Registra quién aprobó y cuándo
     """
-    pago = db.query(Pago).filter(Pago.id == pago_id).first()
-    if not pago:
-        raise HTTPException(status_code=404, detail="Pago no encontrado")
-    if pago.estado_conciliacion != "en_revision":
-        raise HTTPException(status_code=400, detail="Este pago ya fue procesado")
-
-    recibo = pago.recibo
-    apto = pago.apartamento
-    monto_usd = pago.monto_equivalente_usd
-    pendiente = recibo.monto_pendiente_usd
-
-    if monto_usd >= pendiente:
-        excedente = monto_usd - pendiente
-        recibo.monto_pendiente_usd = Decimal("0.00")
-        recibo.estado_pago = "pagado"
-        if excedente > 0:
-            apto.saldo_favor_usd = (apto.saldo_favor_usd or Decimal("0")) + excedente
-    else:
-        recibo.monto_pendiente_usd = pendiente - monto_usd
-        recibo.estado_pago = "parcial"
-
-    pago.estado_conciliacion = "aprobado"
-    pago.fecha_aprobacion = datetime.utcnow()
-    pago.aprobado_por = admin.id
-
-    # Actualizar meses_pendientes del apartamento en tiempo real
-    recibos_restantes = db.query(Recibo).filter(
-        Recibo.apartamento_id == apto.id,
-        Recibo.estado_pago != "pagado"
-    ).count()
-    apto.meses_pendientes = recibos_restantes
-
-    db.commit()
-    db.refresh(pago)
-    db.refresh(recibo)
-    db.refresh(apto)
-
     try:
-        from app.tasks.notificaciones import enviar_whatsapp
-        propietario = apto.propietario
-        from app.config import get_settings
-        s = get_settings()
-        msg = (
-            f"✅ Pago aprobado — {s.condominio_nombre}\n"
-            f"Período: {recibo.mes_periodo}\n"
-            f"Monto: ${float(monto_usd):.2f} USD\n"
-            f"Su recibo de solvencia fue generado.\n"
-            f"Descárguelo en: {s.condominio_portal_url}/mi-cuenta/recibos"
-        )
-        if propietario and propietario.telefono_whatsapp:
-            enviar_whatsapp.delay(propietario.telefono_whatsapp, msg)
-    except BaseException:
-        pass
+        pago = db.query(Pago).filter(Pago.id == pago_id).first()
+        if not pago:
+            raise HTTPException(status_code=404, detail="Pago no encontrado")
+        if pago.estado_conciliacion != "en_revision":
+            raise HTTPException(status_code=400, detail="Este pago ya fue procesado")
 
-    return pago
+        recibo = pago.recibo
+        apto = pago.apartamento
+        monto_usd = pago.monto_equivalente_usd
+        pendiente = recibo.monto_pendiente_usd if recibo else Decimal("15.00")
+
+        if recibo:
+            if monto_usd >= pendiente:
+                excedente = monto_usd - pendiente
+                recibo.monto_pendiente_usd = Decimal("0.00")
+                recibo.estado_pago = "pagado"
+                if excedente > 0 and apto:
+                    apto.saldo_favor_usd = (apto.saldo_favor_usd or Decimal("0")) + excedente
+            else:
+                recibo.monto_pendiente_usd = pendiente - monto_usd
+                recibo.estado_pago = "parcial"
+
+        pago.estado_conciliacion = "aprobado"
+        pago.fecha_aprobacion = datetime.utcnow()
+        pago.aprobado_por = admin.id
+
+        if apto:
+            # Actualizar meses_pendientes del apartamento en tiempo real
+            recibos_restantes = db.query(Recibo).filter(
+                Recibo.apartamento_id == apto.id,
+                Recibo.estado_pago != "pagado"
+            ).count()
+            apto.meses_pendientes = recibos_restantes
+
+        db.commit()
+        db.refresh(pago)
+
+        try:
+            if apto and apto.propietario:
+                from app.tasks.notificaciones import enviar_whatsapp
+                propietario = apto.propietario
+                from app.config import get_settings
+                s = get_settings()
+                msg = (
+                    f"✅ Pago aprobado — {s.condominio_nombre}\n"
+                    f"Período: {recibo.mes_periodo if recibo else 'Actual'}\n"
+                    f"Monto: ${float(monto_usd):.2f} USD\n"
+                    f"Su recibo de solvencia fue generado.\n"
+                    f"Descárguelo en: {s.condominio_portal_url}/mi-cuenta/recibos"
+                )
+                if propietario.telefono_whatsapp:
+                    enviar_whatsapp.delay(propietario.telefono_whatsapp, msg)
+        except BaseException:
+            pass
+
+        return pago
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error al aprobar pago: {str(e)}")
 
 
 @router.post("/{pago_id}/rechazar", response_model=PagoOut)
