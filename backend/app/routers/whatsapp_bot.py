@@ -7,7 +7,8 @@ from app.auth.dependencies import require_admin
 
 router = APIRouter(prefix="/api/whatsapp-bot", tags=["WhatsApp Bot"])
 
-WPP_SERVICE_URL = "http://alcatraz_whatsapp:3000"
+# Al correr juntos en el mismo contenedor en Render, se comunican por localhost
+WPP_SERVICE_URL = "http://127.0.0.1:3000"
 
 
 @router.get("/status")
@@ -16,7 +17,7 @@ async def obtener_estado_bot(_=Depends(require_admin)):
     Obtiene el estado de conexión de WhatsApp y el Código QR si está pendiente de vinculación.
     """
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=4.0) as client:
             res = await client.get(f"{WPP_SERVICE_URL}/status")
             return res.json()
     except Exception as e:
@@ -24,7 +25,7 @@ async def obtener_estado_bot(_=Depends(require_admin)):
             "connected": False,
             "qr": None,
             "session": None,
-            "error": "Microservicio de WhatsApp iniciando en Docker..."
+            "error": "Iniciando motor autónomo de WhatsApp..."
         }
 
 

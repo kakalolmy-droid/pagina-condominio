@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/reportes", tags=["Reportes"])
 settings = get_settings()
 
-WPP_SERVICE_URL = "http://alcatraz_whatsapp:3000"
+WPP_SERVICE_URL = "http://127.0.0.1:3000"
 
 
 class SolicitudAvisosWhatsApp(BaseModel):
