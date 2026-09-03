@@ -109,6 +109,13 @@ def auto_seed_database():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     auto_seed_database()
+    try:
+        from app.services.bcv_scraper import actualizar_tasa_bcv
+        db = SessionLocal()
+        await actualizar_tasa_bcv(db)
+        db.close()
+    except Exception as e:
+        print(f"Nota actualizando tasa en lifespan: {e}")
     print(f"🏢 {settings.condominio_nombre} — API iniciada con éxito en Render")
     yield
     print("🛑 API detenida")

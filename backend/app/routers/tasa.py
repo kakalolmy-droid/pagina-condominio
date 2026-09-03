@@ -9,16 +9,17 @@ router = APIRouter(prefix="/api/tasa", tags=["Tasa BCV"])
 
 @router.get("/actual")
 async def get_tasa_actual(db: Session = Depends(get_db)):
-    """Retorna la tasa BCV más reciente almacenada en la DB."""
+    """Retorna la tasa BCV del día sincronizada automáticamente en tiempo real."""
     try:
+        tasa = await actualizar_tasa_bcv(db)
+    except Exception:
         tasa = obtener_tasa_actual(db)
-        return {
-            "fecha": tasa.fecha,
-            "tasa_usd_ves": float(tasa.tasa_usd_ves),
-            "fecha_registro": tasa.fecha_registro,
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+
+    return {
+        "fecha": tasa.fecha,
+        "tasa_usd_ves": float(tasa.tasa_usd_ves),
+        "fecha_registro": tasa.fecha_registro,
+    }
 
 
 @router.post("/sincronizar", dependencies=[Depends(require_admin)])

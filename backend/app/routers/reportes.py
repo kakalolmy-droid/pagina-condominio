@@ -9,7 +9,7 @@ import logging
 
 from app.database import get_db
 from app.services.excel_export import generar_excel_reporte
-from app.services.bcv_scraper import obtener_tasa_actual
+from app.services.bcv_scraper import obtener_tasa_actual, actualizar_tasa_bcv
 from app.models.apartamento import Apartamento
 from app.models.recibo import Recibo
 from app.models.usuario import Usuario
@@ -59,7 +59,11 @@ async def enviar_masivo_automatico(
     Envía DIRECTA y AUTOMÁTICAMENTE a todos los teléfonos vinculados por WhatsApp
     con toda la información de recaudación, cuota, meses pendientes y total a pagar.
     """
-    tasa = obtener_tasa_actual(db)
+    try:
+        tasa = await actualizar_tasa_bcv(db)
+    except Exception as e:
+        logger.warning(f"Error actualizando tasa en vivo antes del envío: {e}")
+        tasa = obtener_tasa_actual(db)
     tasa_valor = float(tasa.tasa_usd_ves)
 
     banco = payload.banco or settings.condominio_banco or "Banco de Venezuela (0102)"
