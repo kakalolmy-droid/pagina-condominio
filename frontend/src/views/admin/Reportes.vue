@@ -47,13 +47,20 @@
       <!-- Estado No Conectado: Mostrar Código QR para escanear con el celular -->
       <div v-else class="p-4 bg-neu-bg-dark rounded-neu-sm border border-neu-shadow-dark flex flex-col md:flex-row items-center gap-6">
         <div v-if="botEstado.qr" class="flex flex-col items-center bg-white p-3 rounded-neu-sm shadow-neu-sm">
-          <img :src="botEstado.qr" alt="Código QR WhatsApp" class="w-44 h-44 object-contain" />
-          <span class="text-xs text-black font-semibold mt-2">Escanea este QR</span>
+          <img :src="botEstado.qr" alt="Código QR WhatsApp" class="w-48 h-48 object-contain" />
+          <div class="flex items-center gap-2 mt-2">
+            <span class="text-xs text-black font-semibold">● QR en Tiempo Real</span>
+            <button @click="forzarNuevoQR" class="text-xs text-emerald-800 font-bold underline cursor-pointer hover:text-emerald-950">
+              🔄 Refrescar QR
+            </button>
+          </div>
         </div>
-        <div v-else class="flex flex-col items-center justify-center w-44 h-44 bg-neu-bg rounded-neu-sm border border-neu-shadow-dark text-xs text-neu-text-light text-center p-3">
-          <span class="text-xl mb-1">⏳</span>
-          <span>Generando código QR...</span>
-          <button @click="cargarEstadoBot" class="mt-2 text-xs text-neu-green underline cursor-pointer">Reintentar</button>
+        <div v-else class="flex flex-col items-center justify-center w-48 h-48 bg-neu-bg rounded-neu-sm border border-neu-shadow-dark text-xs text-neu-text-light text-center p-3">
+          <span class="text-2xl mb-1">⏳</span>
+          <span class="font-semibold">Generando código QR fresco...</span>
+          <button @click="forzarNuevoQR" class="mt-2 text-xs text-neu-green font-bold underline cursor-pointer">
+            🔄 Generar Nuevo
+          </button>
         </div>
 
         <div class="flex-1 text-xs text-neu-text flex flex-col gap-2">
@@ -247,12 +254,12 @@ onMounted(async () => {
     cargarEstadoBot(),
   ])
 
-  // Sondeo de estado del QR cada 3 segundos hasta que se vincule
+  // Sondeo de estado del QR cada 2.5 segundos para que se actualice dinámicamente como WhatsApp Web
   pollingTimer = setInterval(async () => {
     if (!botEstado.value.connected) {
       await cargarEstadoBot()
     }
-  }, 3000)
+  }, 2500)
 })
 
 onUnmounted(() => {
@@ -265,6 +272,18 @@ async function cargarEstadoBot() {
     botEstado.value = data
   } catch (e) {
     console.error('Error al cargar estado del bot:', e)
+  }
+}
+
+async function forzarNuevoQR() {
+  try {
+    toast.info('Generando nuevo código QR...')
+    botEstado.value.qr = null
+    await api.post('/whatsapp-bot/refresh-qr')
+    await new Promise(r => setTimeout(r, 1000))
+    await cargarEstadoBot()
+  } catch (e) {
+    toast.error('Error al solicitar nuevo QR')
   }
 }
 

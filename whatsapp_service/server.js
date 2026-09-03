@@ -5,9 +5,11 @@ const {
     default: makeWASocket,
     useMultiFileAuthState,
     DisconnectReason,
-    fetchLatestBaileysVersion
+    fetchLatestBaileysVersion,
+    Browsers
 } = require('@whiskeysockets/baileys');
 const pino = require('pino');
+const fs = require('fs');
 
 const app = express();
 app.use(cors());
@@ -21,51 +23,72 @@ let sessionInfo = null;
 const logger = pino({ level: 'silent' });
 
 async function connectToWhatsApp() {
-    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
-    const { version } = await fetchLatestBaileysVersion();
+    try {
+        const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
+        const { version, isLatest } = await fetchLatestBaileysVersion();
+        console.log(`Usando Baileys v${version.join('.')}, isLatest: ${isLatest}`);
 
-    sock = makeWASocket({
-        version,
-        logger,
-        printQRInTerminal: false,
-        auth: state,
-        browser: ['Edificio Alcatraz', 'Chrome', '1.0.0']
-    });
+        sock = makeWASocket({
+            version,
+            logger,
+            printQRInTerminal: false,
+            auth: state,
+            browser: Browsers.macOS('Desktop'),
+            syncFullHistory: false,
+            connectTimeoutMs: 60000,
+            defaultQueryTimeoutMs: 60000,
+            keepAliveIntervalMs: 10000,
+        });
 
-    sock.ev.on('creds.update', saveCreds);
+        sock.ev.on('creds.update', saveCreds);
 
-    sock.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect, qr } = update;
+        sock.ev.on('connection.update', async (update) => {
+            const { connection, lastDisconnect, qr } = update;
 
-        if (qr) {
-            try {
-                qrCodeImage = await QRCode.toDataURL(qr);
+            if (qr) {
+                try {
+                    // Genera imagen QR nítida en tiempo real
+                    qrCodeImage = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
+                    isConnected = false;
+                    console.log('📱 Nuevo código QR Baileys generado.');
+                } catch (err) {
+                    console.error('Error generando QR:', err);
+                }
+            }
+
+            if (connection === 'close') {
+                const statusCode = (lastDisconnect?.error)?.output?.statusCode;
+                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+                console.log(`Conexión cerrada (status ${statusCode}). Reconectando:`, shouldReconnect);
+                
                 isConnected = false;
-                console.log('📱 Nuevo código QR generado para vinculación.');
-            } catch (err) {
-                console.error('Error generando QR:', err);
-            }
-        }
+                qrCodeImage = null;
+                sessionInfo = null;
 
-        if (connection === 'close') {
-            const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('Conexión cerrada. Reconectando:', shouldReconnect);
-            isConnected = false;
-            qrCodeImage = null;
-            sessionInfo = null;
-            if (shouldReconnect) {
-                connectToWhatsApp();
+                if (statusCode === DisconnectReason.loggedOut) {
+                    // Limpiar auth si fue desvinculado
+                    try {
+                        fs.rmSync('auth_info_baileys', { recursive: true, force: true });
+                    } catch (e) {}
+                }
+
+                setTimeout(() => {
+                    connectToWhatsApp();
+                }, 3000);
+            } else if (connection === 'open') {
+                console.log('✅ WhatsApp Conectado exitosamente como línea del condominio.');
+                isConnected = true;
+                qrCodeImage = null;
+                sessionInfo = {
+                    id: sock.user?.id || 'Línea Conectada',
+                    name: sock.user?.name || 'Administración Edificio Alcatraz'
+                };
             }
-        } else if (connection === 'open') {
-            console.log('✅ WhatsApp Conectado exitosamente como línea del condominio.');
-            isConnected = true;
-            qrCodeImage = null;
-            sessionInfo = {
-                id: sock.user?.id || 'Conectado',
-                name: sock.user?.name || 'Línea Edificio Alcatraz'
-            };
-        }
-    });
+        });
+    } catch (err) {
+        console.error('Error al inicializar socket de WhatsApp:', err);
+        setTimeout(connectToWhatsApp, 5000);
+    }
 }
 
 // Iniciar conexión al levantar el servicio
@@ -82,17 +105,34 @@ app.get('/status', (req, res) => {
     });
 });
 
-// Desconectar / Cerrar sesión para cambiar de número
+// Desconectar / Cerrar sesión para cambiar de número o limpiar sesión
 app.post('/logout', async (req, res) => {
     try {
         if (sock) {
-            await sock.logout();
-            isConnected = false;
-            qrCodeImage = null;
-            sessionInfo = null;
-            connectToWhatsApp();
+            try { await sock.logout(); } catch (e) {}
         }
-        res.json({ status: 'ok', message: 'Sesión de WhatsApp cerrada. Listo para nuevo escaneo.' });
+        isConnected = false;
+        qrCodeImage = null;
+        sessionInfo = null;
+        try {
+            fs.rmSync('auth_info_baileys', { recursive: true, force: true });
+        } catch (e) {}
+        setTimeout(connectToWhatsApp, 1000);
+        res.json({ status: 'ok', message: 'Sesión de WhatsApp reseteada. Generando nuevo código QR...' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Endpoint para solicitar nuevo QR forzadamente
+app.post('/refresh-qr', async (req, res) => {
+    try {
+        if (sock) {
+            try { sock.end(); } catch (e) {}
+        }
+        qrCodeImage = null;
+        setTimeout(connectToWhatsApp, 500);
+        res.json({ status: 'ok', message: 'Regenerando código QR...' });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

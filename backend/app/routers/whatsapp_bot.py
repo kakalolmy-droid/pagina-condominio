@@ -29,6 +29,19 @@ async def obtener_estado_bot(_=Depends(require_admin)):
         }
 
 
+@router.post("/refresh-qr")
+async def refrescar_qr(_=Depends(require_admin)):
+    """
+    Fuerza la regeneración de un código QR nuevo y fresco.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            res = await client.post(f"{WPP_SERVICE_URL}/refresh-qr")
+            return res.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/logout")
 async def desvincular_numero(_=Depends(require_admin)):
     """
