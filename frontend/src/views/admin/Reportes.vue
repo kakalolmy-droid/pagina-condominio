@@ -174,7 +174,15 @@
           placeholder="Ej. Recordamos que a partir del día 15 se genera recargo por mora."
         />
 
-        <div class="flex justify-end gap-3 mt-2">
+        <div class="flex flex-col sm:flex-row justify-end gap-3 mt-2">
+          <NeuButton
+            type="button"
+            variant="secondary"
+            @click="guardarPredeterminados"
+            :loading="guardandoPredeterminados"
+          >
+            💾 Guardar como Datos Predeterminados
+          </NeuButton>
           <NeuButton variant="primary" type="submit" :loading="enviando">
             📲 Enviar Automáticamente a Todos los Números Vinculados
           </NeuButton>
@@ -251,7 +259,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { AdminLayout } from '@/components/layout'
 import { NeuCard, NeuButton, NeuInput } from '@/components/neumorph'
-import { reportesService, api } from '@/services'
+import { reportesService, configuracionService, api } from '@/services'
 import { useTasaStore } from '@/stores'
 import { formatTasa, periodoActual } from '@/utils'
 
@@ -261,6 +269,7 @@ const tasaStore = useTasaStore()
 const periodoExcel = ref(periodoActual())
 const exportando = ref(false)
 const enviando = ref(false)
+const guardandoPredeterminados = ref(false)
 const resultadoEnvio = ref(null)
 const botEstado = ref({ connected: false, session: null, qr: null })
 let pollingTimer = null
@@ -283,6 +292,7 @@ onMounted(async () => {
   await Promise.all([
     tasaStore.cargarTasa(),
     cargarEstadoBot(),
+    cargarDatosBancarios(),
   ])
 
   // Sondeo continuo de estado del QR cada 2.5 segundos
@@ -292,6 +302,43 @@ onMounted(async () => {
     }
   }, 2500)
 })
+
+async function cargarDatosBancarios() {
+  try {
+    const { data } = await configuracionService.getDatosBancarios()
+    if (data) {
+      if (data.banco) formAvisos.value.banco = data.banco
+      if (data.pago_movil) formAvisos.value.pago_movil = data.pago_movil
+      if (data.cuenta_transferencia) formAvisos.value.transferencia = data.cuenta_transferencia
+      if (data.zelle) formAvisos.value.zelle = data.zelle
+      if (data.nota_predeterminada) formAvisos.value.nota_adicional = data.nota_predeterminada
+    }
+  } catch (e) {
+    console.error('Error al cargar datos bancarios predeterminados:', e)
+  }
+}
+
+async function guardarPredeterminados(mostrarToast = true) {
+  guardandoPredeterminados.value = true
+  try {
+    await configuracionService.guardarDatosBancarios({
+      banco: formAvisos.value.banco,
+      pago_movil: formAvisos.value.pago_movil,
+      cuenta_transferencia: formAvisos.value.transferencia,
+      zelle: formAvisos.value.zelle,
+      nota_predeterminada: formAvisos.value.nota_adicional,
+    })
+    if (mostrarToast) {
+      toast.success('¡Datos bancarios guardados como predeterminados y sincronizados con los propietarios!')
+    }
+  } catch (e) {
+    if (mostrarToast) {
+      toast.error('Error al guardar datos bancarios predeterminados')
+    }
+  } finally {
+    guardandoPredeterminados.value = false
+  }
+}
 
 onUnmounted(() => {
   if (pollingTimer) clearInterval(pollingTimer)
@@ -354,6 +401,7 @@ async function enviarMasivo() {
   enviando.value = true
   resultadoEnvio.value = null
   try {
+    guardarPredeterminados(false)
     const { data } = await reportesService.enviarMasivoAutomatico(formAvisos.value)
     resultadoEnvio.value = data
     toast.success(data.mensaje)

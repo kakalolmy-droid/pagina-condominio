@@ -13,6 +13,7 @@ from app.services.bcv_scraper import obtener_tasa_actual, actualizar_tasa_bcv
 from app.models.apartamento import Apartamento
 from app.models.recibo import Recibo
 from app.models.usuario import Usuario
+from app.models.configuracion import ConfiguracionCondominio
 from app.config import get_settings
 from app.auth.dependencies import require_admin
 
@@ -66,10 +67,24 @@ async def enviar_masivo_automatico(
         tasa = obtener_tasa_actual(db)
     tasa_valor = float(tasa.tasa_usd_ves)
 
-    banco = payload.banco or settings.condominio_banco or "Banco de Venezuela (0102)"
-    pago_movil = payload.pago_movil or settings.condominio_pago_movil or "0414-1234567 | C.I. V-00000001"
-    transferencia = payload.transferencia or settings.condominio_cuenta or "0102-0000-00-0000000000"
-    zelle = payload.zelle or "pagos@edificioalcatraz.com"
+    config = db.query(ConfiguracionCondominio).first()
+    if config:
+        if payload.banco:
+            config.banco = payload.banco
+        if payload.pago_movil:
+            config.pago_movil = payload.pago_movil
+        if payload.transferencia:
+            config.cuenta_transferencia = payload.transferencia
+        if payload.zelle:
+            config.zelle = payload.zelle
+        if payload.nota_adicional:
+            config.nota_predeterminada = payload.nota_adicional
+        db.commit()
+
+    banco = payload.banco or (config.banco if config else None) or settings.condominio_banco or "Banco de Venezuela (0102)"
+    pago_movil = payload.pago_movil or (config.pago_movil if config else None) or settings.condominio_pago_movil or "0414-1234567 | C.I. V-00000001"
+    transferencia = payload.transferencia or (config.cuenta_transferencia if config else None) or settings.condominio_cuenta or "0102-0000-00-0000000000"
+    zelle = payload.zelle or (config.zelle if config else None) or "pagos@edificioalcatraz.com"
     portal_url = "https://pagina-condominio.vercel.app/mi-cuenta/pagar"
 
     aptos = db.query(Apartamento).filter(

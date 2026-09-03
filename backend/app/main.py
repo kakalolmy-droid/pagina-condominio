@@ -11,7 +11,7 @@ from app.models.apartamento import Apartamento
 from app.models.tasa_bcv import TasaBCV
 from datetime import date
 from decimal import Decimal
-from app.routers import auth, tasa, usuarios, apartamentos, recibos, pagos, conciliacion, reportes, whatsapp_bot
+from app.routers import auth, tasa, usuarios, apartamentos, recibos, pagos, conciliacion, reportes, whatsapp_bot, configuracion
 from app.config import get_settings
 
 settings = get_settings()
@@ -167,6 +167,7 @@ app.include_router(pagos.router)          # /api/pagos/
 app.include_router(conciliacion.router)   # /api/conciliacion/
 app.include_router(reportes.router)       # /api/reportes/
 app.include_router(whatsapp_bot.router)   # /api/whatsapp-bot/
+app.include_router(configuracion.router)   # /api/configuracion/
 
 
 @app.api_route("/", methods=["GET", "HEAD"], tags=["Root"])

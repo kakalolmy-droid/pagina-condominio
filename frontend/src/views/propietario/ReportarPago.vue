@@ -16,10 +16,10 @@
         <!-- Cuentas bancarias del condominio -->
         <div class="bg-neu-bg-dark p-4 rounded-neu-sm border border-neu-shadow-dark text-xs text-neu-text flex flex-col gap-1.5">
           <p class="font-bold text-neu-green">📌 Datos Oficiales de Recaudación (Edificio Alcatraz):</p>
-          <p><span class="font-semibold">Banco:</span> Banco de Venezuela (0102)</p>
-          <p><span class="font-semibold">Pago Móvil:</span> 0414-1234567 | C.I. V-00000001</p>
-          <p><span class="font-semibold">Transferencias VES:</span> 0102-0000-00-0000000000</p>
-          <p><span class="font-semibold">Zelle:</span> pagos@edificioalcatraz.com</p>
+          <p><span class="font-semibold">Banco:</span> {{ datosBancarios.banco || 'Banco de Venezuela (0102)' }}</p>
+          <p><span class="font-semibold">Pago Móvil:</span> {{ datosBancarios.pago_movil || '0414-1234567 | C.I. V-00000001' }}</p>
+          <p><span class="font-semibold">Transferencias VES:</span> {{ datosBancarios.cuenta_transferencia || '0102-0000-00-0000000000' }}</p>
+          <p v-if="datosBancarios.zelle"><span class="font-semibold">Zelle / Divisas:</span> {{ datosBancarios.zelle }}</p>
           <p class="text-neu-green font-semibold mt-1">
             Tasa oficial BCV hoy: {{ tasaStore.tasaActual ? formatTasa(tasaStore.tasaActual) : 'Consultando...' }}
           </p>
@@ -139,6 +139,7 @@ import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { PropietarioLayout } from '@/components/layout'
 import { NeuCard, NeuButton, NeuInput } from '@/components/neumorph'
+import { configuracionService } from '@/services'
 import { useTasaStore, useRecibosStore, usePagosStore } from '@/stores'
 import { formatUSD, formatVES, formatTasa, formatPeriodo } from '@/utils'
 import { METODOS_PAGO } from '@/constants'
@@ -153,6 +154,13 @@ const pagosStore = usePagosStore()
 
 const enviando = ref(false)
 const archivoComprobante = ref(null)
+
+const datosBancarios = ref({
+  banco: 'Banco de Venezuela (0102)',
+  pago_movil: '0414-1234567 | C.I. V-00000001',
+  cuenta_transferencia: '0102-0000-00-0000000000',
+  zelle: 'pagos@edificioalcatraz.com',
+})
 
 const form = ref({
   recibo_id: null,
@@ -175,10 +183,22 @@ const montoCalculadoUSD = computed(() => {
   return tasa > 0 ? parseFloat((monto / tasa).toFixed(2)) : 0
 })
 
+async function cargarDatosBancarios() {
+  try {
+    const { data } = await configuracionService.getDatosBancarios()
+    if (data) {
+      datosBancarios.value = data
+    }
+  } catch (e) {
+    console.error('Error al cargar datos bancarios oficiales:', e)
+  }
+}
+
 onMounted(async () => {
   await Promise.all([
     tasaStore.cargarTasa(),
     recibosStore.cargarMisRecibos(),
+    cargarDatosBancarios(),
   ])
 
   if (route.query.recibo_id) {
