@@ -47,6 +47,20 @@ export function formatTasa(tasa) {
  */
 export function formatFecha(fecha) {
   if (!fecha) return '—'
+  if (typeof fecha === 'string') {
+    const soloFecha = fecha.split('T')[0]
+    const partes = soloFecha.split('-')
+    if (partes.length === 3) {
+      const year = parseInt(partes[0], 10)
+      const month = parseInt(partes[1], 10) - 1
+      const day = parseInt(partes[2], 10)
+      return new Date(year, month, day).toLocaleDateString('es-VE', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    }
+  }
   return new Date(fecha).toLocaleDateString('es-VE', {
     day: 'numeric',
     month: 'short',

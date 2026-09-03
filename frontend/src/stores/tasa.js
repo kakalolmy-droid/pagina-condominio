@@ -10,6 +10,8 @@ export const useTasaStore = defineStore('tasa', () => {
   async function cargarTasa() {
     cargando.value = true
     try {
+      const hoyLocal = new Date().toLocaleDateString('en-CA')
+
       // 1. Intentar consultar la API pública en tiempo real de DolarAPI
       try {
         const respuesta = await fetch('https://ve.dolarapi.com/v1/dolares/oficial')
@@ -17,7 +19,7 @@ export const useTasaStore = defineStore('tasa', () => {
           const datos = await respuesta.json()
           if (datos && datos.promedio) {
             tasaActual.value = parseFloat(datos.promedio)
-            fecha.value = datos.fechaActualizacion?.split('T')[0] || new Date().toISOString().split('T')[0]
+            fecha.value = datos.fechaActualizacion?.split('T')[0] || hoyLocal
             cargando.value = false
             return
           }
@@ -29,7 +31,7 @@ export const useTasaStore = defineStore('tasa', () => {
       // 2. Si falla la llamada directa, consultar el backend sincronizado
       const { data } = await api.get('/tasa/actual')
       tasaActual.value = parseFloat(data.tasa_usd_ves)
-      fecha.value = data.fecha
+      fecha.value = data.fecha || hoyLocal
     } catch (e) {
       console.error('No se pudo cargar la tasa BCV:', e)
     } finally {
