@@ -3,7 +3,7 @@
     titulo="Avisos y Cobranzas Masivas por WhatsApp"
     subtitulo="Envío masivo automático a todos los números registrados con fecha límite, datos bancarios y link de pago"
   >
-    <!-- Tarjeta 1: Vinculación Oficial de la Línea WhatsApp del Condominio (Con Código QR en Vivo) -->
+    <!-- Tarjeta 1: Vinculación Oficial de la Línea WhatsApp del Condominio (Con Código QR y Código de 8 Dígitos) -->
     <NeuCard class="mb-8 border-2 border-neu-green/30">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div class="flex items-center gap-3">
@@ -11,7 +11,7 @@
           <div>
             <h3 class="text-lg font-bold text-neu-green">Línea Oficial de WhatsApp de la Junta / Condominio</h3>
             <p class="text-xs text-neu-text-light">
-              Vincula el número que la junta de condominio o administración utilizará para despachar los mensajes masivos
+              Vincula el número que la administración utilizará para despachar los mensajes masivos automáticos
             </p>
           </div>
         </div>
@@ -41,38 +41,65 @@
             Línea emisora: <span class="font-mono font-semibold text-neu-text">{{ botEstado.session?.id || 'Número Oficial Vinculado' }}</span>
           </p>
         </div>
-        <span class="text-xs text-neu-text-light italic">Todos los avisos saldrán directamente desde este número sin abrir pestañas</span>
+        <span class="text-xs text-neu-text-light italic">Todos los avisos saldrán directamente desde este número de forma automática</span>
       </div>
 
-      <!-- Estado No Conectado: Mostrar Código QR para escanear con el celular -->
+      <!-- Estado No Conectado: 2 Métodos (Código QR O Vincular con Código Numérico) -->
       <div v-else class="p-4 bg-neu-bg-dark rounded-neu-sm border border-neu-shadow-dark flex flex-col md:flex-row items-center gap-6">
-        <div v-if="botEstado.qr" class="flex flex-col items-center bg-white p-3 rounded-neu-sm shadow-neu-sm">
-          <img :src="botEstado.qr" alt="Código QR WhatsApp" class="w-48 h-48 object-contain" />
-          <div class="flex items-center gap-2 mt-2">
-            <span class="text-xs text-black font-semibold">● QR en Tiempo Real</span>
-            <button @click="forzarNuevoQR" class="text-xs text-emerald-800 font-bold underline cursor-pointer hover:text-emerald-950">
-              🔄 Refrescar QR
-            </button>
+        <!-- Método 1: Código QR -->
+        <div class="flex flex-col items-center">
+          <div v-if="botEstado.qr" class="flex flex-col items-center bg-white p-3 rounded-neu-sm shadow-neu-sm">
+            <img :src="botEstado.qr" alt="Código QR WhatsApp" class="w-44 h-44 object-contain" />
+            <span class="text-xs text-black font-semibold mt-1">● QR en Tiempo Real</span>
           </div>
-        </div>
-        <div v-else class="flex flex-col items-center justify-center w-48 h-48 bg-neu-bg rounded-neu-sm border border-neu-shadow-dark text-xs text-neu-text-light text-center p-3">
-          <span class="text-2xl mb-1">⏳</span>
-          <span class="font-semibold">Generando código QR fresco...</span>
+          <div v-else class="flex flex-col items-center justify-center w-44 h-44 bg-neu-bg rounded-neu-sm border border-neu-shadow-dark text-xs text-neu-text-light text-center p-3">
+            <span class="text-2xl mb-1">⏳</span>
+            <span class="font-semibold">Generando QR...</span>
+          </div>
           <button @click="forzarNuevoQR" class="mt-2 text-xs text-neu-green font-bold underline cursor-pointer">
-            🔄 Generar Nuevo
+            🔄 Refrescar Código QR
           </button>
         </div>
 
-        <div class="flex-1 text-xs text-neu-text flex flex-col gap-2">
-          <p class="font-bold text-neu-green text-sm">📲 Pasos para Vincular la Línea Oficial:</p>
-          <ol class="list-decimal list-inside space-y-1 text-neu-text-light">
-            <li>Abre la aplicación de <strong>WhatsApp</strong> en el teléfono de la Junta / Condominio.</li>
-            <li>Toca en <strong>Menú / Ajustes (⚙️)</strong> y selecciona <strong>Dispositivos vinculados</strong>.</li>
-            <li>Toca en <strong>Vincular un dispositivo</strong> y apunta la cámara a este código QR.</li>
-          </ol>
-          <p class="text-neu-green font-semibold mt-1">
-            Una vez escaneado, la sesión queda guardada y podrás enviar los avisos a todos los apartamentos con un solo clic.
-          </p>
+        <!-- Método 2: Código de 8 Dígitos (Pairing Code Directo) -->
+        <div class="flex-1 text-xs text-neu-text flex flex-col gap-3 border-t md:border-t-0 md:border-l border-neu-shadow-dark pt-4 md:pt-0 md:pl-6">
+          <div>
+            <p class="font-bold text-neu-green text-sm">📲 Opción 1: Escanear Código QR</p>
+            <p class="text-neu-text-light mt-0.5">
+              En tu celular: <strong>WhatsApp > Ajustes > Dispositivos vinculados > Vincular dispositivo</strong> y apunta al QR.
+            </p>
+          </div>
+
+          <div class="mt-2 p-3 bg-neu-bg rounded-neu-sm border border-neu-shadow-dark">
+            <p class="font-bold text-neu-green text-sm">🔢 Opción 2: Vincular con Número de Teléfono</p>
+            <p class="text-neu-text-light mt-0.5 mb-2">
+              Si el QR tarda, ingresa tu número y genera tu código de 8 dígitos para WhatsApp:
+            </p>
+            <div class="flex gap-2 items-center">
+              <input
+                v-model="telefonoPairing"
+                type="text"
+                placeholder="Ej. 04141234567 o 584141234567"
+                class="input-neu text-xs flex-1 py-1.5 px-3"
+              />
+              <button
+                @click="solicitarPairingCode"
+                :disabled="pidiendoCodigo"
+                class="px-3 py-1.5 rounded-neu-sm bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs shadow-neu-sm cursor-pointer"
+              >
+                {{ pidiendoCodigo ? 'Generando...' : 'Obtener Código' }}
+              </button>
+            </div>
+            <div v-if="pairingCodeResultado" class="mt-3 p-2.5 bg-emerald-950/40 border border-emerald-500/50 rounded-neu-sm text-center">
+              <span class="text-xs text-emerald-300">Tu código de vinculación para WhatsApp es:</span>
+              <p class="text-xl font-extrabold tracking-widest text-white mt-1 select-all">
+                {{ pairingCodeResultado }}
+              </p>
+              <p class="text-xxs text-neu-text-light mt-1">
+                Toca la notificación en tu WhatsApp o en <em>Vincular con número de teléfono</em> e introduce este código.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </NeuCard>
@@ -238,6 +265,10 @@ const resultadoEnvio = ref(null)
 const botEstado = ref({ connected: false, session: null, qr: null })
 let pollingTimer = null
 
+const telefonoPairing = ref('')
+const pidiendoCodigo = ref(false)
+const pairingCodeResultado = ref('')
+
 const formAvisos = ref({
   periodo: periodoActual(),
   fecha_limite: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -254,7 +285,7 @@ onMounted(async () => {
     cargarEstadoBot(),
   ])
 
-  // Sondeo de estado del QR cada 2.5 segundos para que se actualice dinámicamente como WhatsApp Web
+  // Sondeo continuo de estado del QR cada 2.5 segundos
   pollingTimer = setInterval(async () => {
     if (!botEstado.value.connected) {
       await cargarEstadoBot()
@@ -284,6 +315,26 @@ async function forzarNuevoQR() {
     await cargarEstadoBot()
   } catch (e) {
     toast.error('Error al solicitar nuevo QR')
+  }
+}
+
+async function solicitarPairingCode() {
+  if (!telefonoPairing.value) {
+    toast.error('Ingresa tu número de teléfono')
+    return
+  }
+  pidiendoCodigo.value = true
+  pairingCodeResultado.value = ''
+  try {
+    const { data } = await api.post('/whatsapp-bot/request-pairing-code', { phone: telefonoPairing.value })
+    if (data.code) {
+      pairingCodeResultado.value = data.code
+      toast.success('¡Código de vinculación generado!')
+    }
+  } catch (e) {
+    toast.error(e.response?.data?.detail || 'Error al generar código de vinculación')
+  } finally {
+    pidiendoCodigo.value = false
   }
 }
 

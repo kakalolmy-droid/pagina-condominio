@@ -11,6 +11,10 @@ router = APIRouter(prefix="/api/whatsapp-bot", tags=["WhatsApp Bot"])
 WPP_SERVICE_URL = "http://127.0.0.1:3000"
 
 
+class PairingCodeRequest(BaseModel):
+    phone: str
+
+
 @router.get("/status")
 async def obtener_estado_bot(_=Depends(require_admin)):
     """
@@ -27,6 +31,19 @@ async def obtener_estado_bot(_=Depends(require_admin)):
             "session": None,
             "error": "Iniciando motor autónomo de WhatsApp..."
         }
+
+
+@router.post("/request-pairing-code")
+async def solicitar_codigo_vinculacion(payload: PairingCodeRequest, _=Depends(require_admin)):
+    """
+    Solicita un código de vinculación numérico de 8 dígitos para enlazar WhatsApp sin escanear cámara.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            res = await client.post(f"{WPP_SERVICE_URL}/request-pairing-code", json={"phone": payload.phone})
+            return res.json()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/refresh-qr")

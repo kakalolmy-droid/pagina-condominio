@@ -66,7 +66,6 @@ async function connectToWhatsApp() {
                 sessionInfo = null;
 
                 if (statusCode === DisconnectReason.loggedOut) {
-                    // Limpiar auth si fue desvinculado
                     try {
                         fs.rmSync('auth_info_baileys', { recursive: true, force: true });
                     } catch (e) {}
@@ -103,6 +102,28 @@ app.get('/status', (req, res) => {
         qr: qrCodeImage,
         session: sessionInfo
     });
+});
+
+// Vincular por Código de 8 Dígitos (Pairing Code)
+app.post('/request-pairing-code', async (req, res) => {
+    const { phone } = req.body;
+    if (!phone) {
+        return res.status(400).json({ error: 'Número de teléfono requerido' });
+    }
+    try {
+        let cleanPhone = phone.replace(/\D/g, '');
+        if (!cleanPhone.startsWith('58') && cleanPhone.length === 10) {
+            cleanPhone = '58' + cleanPhone;
+        }
+        if (!sock) {
+            await connectToWhatsApp();
+        }
+        const code = await sock.requestPairingCode(cleanPhone);
+        res.json({ success: true, code, phone: cleanPhone });
+    } catch (e) {
+        console.error('Error solicitando código de vinculación:', e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // Desconectar / Cerrar sesión para cambiar de número o limpiar sesión
