@@ -144,7 +144,7 @@ app.include_router(reportes.router)       # /api/reportes/
 app.include_router(whatsapp_bot.router)   # /api/whatsapp-bot/
 
 
-@app.get("/", tags=["Root"])
+@app.api_route("/", methods=["GET", "HEAD"], tags=["Root"])
 async def root():
     return {
         "sistema": settings.condominio_nombre,
@@ -154,6 +154,6 @@ async def root():
     }
 
 
-@app.get("/health", tags=["Health"])
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["Health"])
 async def health_check():
     return {"status": "ok"}
