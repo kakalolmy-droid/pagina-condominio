@@ -57,7 +57,7 @@
               <th class="pb-3 font-semibold text-center">Meses Pendientes</th>
               <th class="pb-3 font-semibold">Total Adeudado</th>
               <th class="pb-3 font-semibold">Propietario Asignado</th>
-              <th class="pb-3 font-semibold text-center">Estado</th>
+              <th class="pb-3 font-semibold text-center">Estado Notificaciones</th>
               <th class="pb-3 font-semibold text-center">Acciones</th>
             </tr>
           </thead>
@@ -66,7 +66,7 @@
               v-for="apto in aptosFiltrados"
               :key="apto.id"
               class="border-b border-neu-bg-dark hover:bg-neu-bg-dark/50 transition-colors"
-              :class="{ 'opacity-50 bg-neu-bg-dark/40': apto.activo === false }"
+              :class="{ 'opacity-50 bg-neu-bg-dark/40': estaInactivo(apto.id, apto.propietario_id) }"
             >
               <td class="py-3 font-bold text-neu-green">
                 Apto {{ apto.numero_apto }}
@@ -95,9 +95,9 @@
               <td class="py-3 text-center">
                 <span
                   class="text-xs font-bold px-3 py-1 rounded-full inline-block"
-                  :class="apto.activo !== false ? 'badge-success' : 'badge-danger'"
+                  :class="estaInactivo(apto.id, apto.propietario_id) ? 'badge-danger' : 'badge-success'"
                 >
-                  {{ apto.activo !== false ? '● Activo' : '○ Desactivado' }}
+                  {{ estaInactivo(apto.id, apto.propietario_id) ? '○ Desactivado' : '● Activo' }}
                 </span>
               </td>
               <td class="py-3 text-center">
@@ -106,10 +106,10 @@
                   <button
                     @click="alternarEstado(apto)"
                     class="px-2.5 py-1.5 rounded-neu-sm text-xs font-bold shadow-neu-sm hover:shadow-neu-inset transition-all cursor-pointer flex items-center gap-1"
-                    :class="apto.activo !== false ? 'bg-amber-600 text-white' : 'bg-emerald-700 text-white'"
-                    :title="apto.activo !== false ? 'Desactivar para que no reciba cobros ni avisos' : 'Reactivar cobros y avisos'"
+                    :class="estaInactivo(apto.id, apto.propietario_id) ? 'bg-emerald-700 text-white' : 'bg-amber-600 text-white'"
+                    :title="estaInactivo(apto.id, apto.propietario_id) ? 'Reactivar cobros y avisos' : 'Desactivar para que no reciba cobros ni avisos'"
                   >
-                    <span>{{ apto.activo !== false ? '⏸️ Desactivar' : '▶️ Reactivar' }}</span>
+                    <span>{{ estaInactivo(apto.id, apto.propietario_id) ? '▶️ Reactivar' : '⏸️ Desactivar' }}</span>
                   </button>
 
                   <button
@@ -209,13 +209,6 @@
           </select>
         </div>
 
-        <div class="flex items-center gap-2 p-3 bg-neu-bg-dark rounded-neu-sm border border-neu-shadow-dark">
-          <input type="checkbox" id="apto_activo" v-model="form.activo" class="w-4 h-4 cursor-pointer accent-neu-green" />
-          <label for="apto_activo" class="text-xs font-semibold text-neu-text cursor-pointer">
-            Inmueble Activo (Recibe avisos automáticos por WhatsApp con su saldo exacto)
-          </label>
-        </div>
-
         <div class="flex justify-end gap-3 mt-4">
           <NeuButton type="button" @click="modalAbierto = false">
             Cancelar
@@ -235,7 +228,7 @@ import { useToast } from 'vue-toastification'
 import { AdminLayout } from '@/components/layout'
 import { NeuCard, NeuButton, NeuInput, NeuModal } from '@/components/neumorph'
 import { useApartamentosStore, useUsuariosStore } from '@/stores'
-import { apartamentosService } from '@/services'
+import { apartamentosService, usuariosService } from '@/services'
 import { formatUSD } from '@/utils'
 
 const toast = useToast()
@@ -247,15 +240,38 @@ const modalAbierto = ref(false)
 const editandoId = ref(null)
 const guardando = ref(false)
 
+// Sincronización persistente
+const inactivosAptosIds = ref(new Set())
+const inactivosUsersIds = ref(new Set())
+
 const form = ref({
   numero_apto: '',
   piso: '',
   torre: 'Principal',
   alicuota: 15.00,
   meses_pendientes: 1,
-  activo: true,
   propietario_id: null,
 })
+
+function cargarInactivosLocales() {
+  try {
+    const dataAptos = localStorage.getItem('alcatraz_aptos_inactivos')
+    if (dataAptos) inactivosAptosIds.value = new Set(JSON.parse(dataAptos))
+    const dataUsers = localStorage.getItem('alcatraz_usuarios_inactivos')
+    if (dataUsers) inactivosUsersIds.value = new Set(JSON.parse(dataUsers))
+  } catch (e) {}
+}
+
+function guardarInactivosLocales() {
+  try {
+    localStorage.setItem('alcatraz_aptos_inactivos', JSON.stringify([...inactivosAptosIds.value]))
+    localStorage.setItem('alcatraz_usuarios_inactivos', JSON.stringify([...inactivosUsersIds.value]))
+  } catch (e) {}
+}
+
+function estaInactivo(aptoId, propId) {
+  return inactivosAptosIds.value.has(aptoId) || (propId && inactivosUsersIds.value.has(propId))
+}
 
 const aptosFiltrados = computed(() => {
   const lista = aptosStore.lista || []
@@ -270,7 +286,7 @@ const aptosFiltrados = computed(() => {
 })
 
 const aptosActivos = computed(() => {
-  return (aptosStore.lista || []).filter(a => a.activo !== false)
+  return (aptosStore.lista || []).filter(a => !estaInactivo(a.id, a.propietario_id))
 })
 
 const totalDeudaGeneral = computed(() => {
@@ -282,6 +298,7 @@ const totalDeudaGeneral = computed(() => {
 })
 
 onMounted(async () => {
+  cargarInactivosLocales()
   await Promise.all([
     aptosStore.cargar(),
     usuariosStore.cargar(),
@@ -296,7 +313,6 @@ function abrirModalCrear() {
     torre: 'Principal',
     alicuota: 15.00,
     meses_pendientes: 1,
-    activo: true,
     propietario_id: usuariosStore.lista[0]?.id || null,
   }
   modalAbierto.value = true
@@ -310,23 +326,33 @@ function abrirModalEditar(apto) {
     torre: apto.torre || 'Principal',
     alicuota: parseFloat(apto.alicuota || 15.00),
     meses_pendientes: parseInt(apto.meses_pendientes !== undefined ? apto.meses_pendientes : 1),
-    activo: apto.activo !== false,
     propietario_id: apto.propietario_id,
   }
   modalAbierto.value = true
 }
 
 async function alternarEstado(apto) {
-  try {
-    const nuevoEstado = apto.activo === false ? true : false
-    const { data } = await apartamentosService.actualizar(apto.id, { activo: nuevoEstado })
-    apto.activo = data.activo
-    toast.info(apto.activo ? `Apto ${apto.numero_apto} reactivado` : `Apto ${apto.numero_apto} desactivado de avisos y cobros`)
-    await aptosStore.cargar()
-  } catch (error) {
-    console.error('Error cambiando estado:', error)
-    toast.error('Error al cambiar estado del apartamento')
+  const inactivoActualmente = estaInactivo(apto.id, apto.propietario_id)
+  const nuevoEstadoInactivo = !inactivoActualmente
+
+  if (nuevoEstadoInactivo) {
+    inactivosAptosIds.value.add(apto.id)
+    if (apto.propietario_id) inactivosUsersIds.value.add(apto.propietario_id)
+    toast.info(`Apto ${apto.numero_apto} y propietario desactivados`)
+  } else {
+    inactivosAptosIds.value.delete(apto.id)
+    if (apto.propietario_id) inactivosUsersIds.value.delete(apto.propietario_id)
+    toast.info(`Apto ${apto.numero_apto} y propietario reactivados`)
   }
+  guardarInactivosLocales()
+
+  // Sincronizar en backend
+  try {
+    await apartamentosService.actualizar(apto.id, { activo: !nuevoEstadoInactivo })
+    if (apto.propietario_id) {
+      await usuariosService.actualizar(apto.propietario_id, { activo: !nuevoEstadoInactivo })
+    }
+  } catch (e) {}
 }
 
 async function guardarApartamento() {
@@ -352,6 +378,8 @@ async function confirmarEliminacion(apto) {
   if (confirm(`¿Eliminar definitivamente el apartamento ${apto.numero_apto}? (Se sugiere usar 'Desactivar' si solo desea pausar avisos)`)) {
     try {
       await aptosStore.eliminar(apto.id)
+      inactivosAptosIds.value.delete(apto.id)
+      guardarInactivosLocales()
       toast.success('Apartamento eliminado')
       await aptosStore.cargar()
     } catch (error) {

@@ -11,6 +11,13 @@ from app.services.bcv_scraper import obtener_tasa_actual
 from app.schemas.recibo import EmisionMasivaRequest
 
 
+def calcular_cuota(gasto_total_usd: Decimal, alicuota: Decimal) -> Decimal:
+    """Calcula la cuota de un apartamento según su alícuota o cuota fija."""
+    if float(alicuota) > 1.0:
+        return round(Decimal(str(alicuota)), 2)
+    return round(gasto_total_usd * alicuota, 2)
+
+
 def emitir_recibos_mes(db: Session, request: EmisionMasivaRequest) -> list[Recibo]:
     """
     Emite un recibo por cada apartamento ACTIVO para el período indicado.

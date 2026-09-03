@@ -76,7 +76,7 @@
                     @click="alternarEstado(usuario)"
                     class="px-2.5 py-1.5 rounded-neu-sm text-xs font-bold shadow-neu-sm hover:shadow-neu-inset transition-all cursor-pointer flex items-center gap-1"
                     :class="estaInactivo(usuario.id) ? 'bg-emerald-700 text-white' : 'bg-amber-600 text-white'"
-                    :title="estaInactivo(usuario.id) ? 'Reactivar usuario' : 'Desactivar usuario para que no reciba avisos ni pueda ingresar'"
+                    :title="estaInactivo(usuario.id) ? 'Reactivar usuario e inmuebles' : 'Desactivar usuario e inmuebles para que no reciba avisos'"
                   >
                     <span>{{ estaInactivo(usuario.id) ? '▶️ Reactivar' : '⏸️ Desactivar' }}</span>
                   </button>
@@ -190,18 +190,19 @@ import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { AdminLayout } from '@/components/layout'
 import { NeuCard, NeuButton, NeuInput, NeuModal } from '@/components/neumorph'
-import { useUsuariosStore } from '@/stores'
-import { usuariosService } from '@/services'
+import { useUsuariosStore, useApartamentosStore } from '@/stores'
+import { usuariosService, apartamentosService } from '@/services'
 
 const toast = useToast()
 const usuariosStore = useUsuariosStore()
+const aptosStore = useApartamentosStore()
 
 const busqueda = ref('')
 const modalAbierto = ref(false)
 const editandoId = ref(null)
 const guardando = ref(false)
 
-// Estado persistente garantizado de usuarios inactivos
+// Estado persistente sincronizado de usuarios e inmuebles inactivos
 const inactivosIds = ref(new Set())
 
 const form = ref({
@@ -246,9 +247,9 @@ const usuariosFiltrados = computed(() => {
   )
 })
 
-onMounted(() => {
+onMounted(async () => {
   cargarInactivosLocales()
-  usuariosStore.cargar()
+  await Promise.all([usuariosStore.cargar(), aptosStore.cargar()])
 })
 
 function abrirModalCrear() {
@@ -280,20 +281,29 @@ function abrirModalEditar(usuario) {
 }
 
 async function alternarEstado(usuario) {
-  if (inactivosIds.value.has(usuario.id)) {
-    inactivosIds.value.delete(usuario.id)
-    guardarInactivosLocales()
-    toast.info(`Propietario ${usuario.nombre} reactivado`)
-  } else {
+  const nuevoEstadoInactivo = !inactivosIds.value.has(usuario.id)
+  if (nuevoEstadoInactivo) {
     inactivosIds.value.add(usuario.id)
-    guardarInactivosLocales()
-    toast.info(`Propietario ${usuario.nombre} desactivado (no recibirá avisos)`)
+    toast.info(`Propietario ${usuario.nombre} y sus apartamentos desactivados`)
+  } else {
+    inactivosIds.value.delete(usuario.id)
+    toast.info(`Propietario ${usuario.nombre} y sus apartamentos reactivados`)
   }
-  
+  guardarInactivosLocales()
+
+  // Sincronizar en cascada en apartamentos del usuario
+  const aptosDelUsuario = (aptosStore.lista || []).filter(a => a.propietario_id === usuario.id)
+  for (const apto of aptosDelUsuario) {
+    try {
+      await apartamentosService.actualizar(apto.id, { activo: !nuevoEstadoInactivo })
+    } catch (e) {}
+  }
+
   // Intento de actualización en backend
   try {
-    await usuariosService.actualizar(usuario.id, { activo: !inactivosIds.value.has(usuario.id) })
+    await usuariosService.actualizar(usuario.id, { activo: !nuevoEstadoInactivo })
   } catch (e) {}
+  await aptosStore.cargar()
 }
 
 async function guardarPropietario() {
