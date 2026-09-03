@@ -35,6 +35,10 @@ def auto_seed_database():
                 conn.execute(text("ALTER TABLE apartamentos ADD COLUMN meses_pendientes INTEGER DEFAULT 1"))
             except Exception:
                 pass
+            try:
+                conn.execute(text("ALTER TABLE pagos ALTER COLUMN comprobante_url TYPE TEXT"))
+            except Exception:
+                pass
 
         admin = db.query(Usuario).filter(Usuario.email == "admin@alcatraz.com").first()
         if not admin:

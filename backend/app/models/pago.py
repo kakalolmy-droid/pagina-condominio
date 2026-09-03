@@ -21,8 +21,8 @@ class Pago(Base):
     tasa_bcv_aplicada = Column(Numeric(12, 4), nullable=False)
     monto_equivalente_usd = Column(Numeric(10, 2), nullable=False)
 
-    # Comprobante subido a Cloudinary
-    comprobante_url = Column(String(500), nullable=False)
+    # Comprobante subido
+    comprobante_url = Column(Text, nullable=False)
 
     # Conciliación
     estado_conciliacion = Column(String(20), default="en_revision")  # en_revision | aprobado | rechazado
