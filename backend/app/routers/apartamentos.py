@@ -23,6 +23,7 @@ def listar_apartamentos(
     db: Session = Depends(get_db),
     _=Depends(require_admin),
 ):
+    sincronizar_recibos_todos_apartamentos(db)
     return db.query(Apartamento).order_by(Apartamento.numero_apto).all()
 
 

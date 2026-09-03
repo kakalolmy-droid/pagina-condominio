@@ -68,6 +68,8 @@ def aprobar_pago(
         pago.fecha_aprobacion = datetime.utcnow()
         pago.aprobado_por = admin.id
 
+        db.flush()
+
         if apto:
             # Actualizar meses_pendientes del apartamento en tiempo real
             recibos_restantes = db.query(Recibo).filter(
