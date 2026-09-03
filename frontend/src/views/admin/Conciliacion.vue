@@ -155,6 +155,45 @@
         </div>
       </form>
     </NeuModal>
+
+    <!-- Modal para Visualizar Comprobante de Pago en Pantalla -->
+    <NeuModal v-model="modalComprobanteAbierto" title="Comprobante de Pago Adjunto">
+      <div class="flex flex-col items-center gap-4">
+        <div v-if="comprobanteUrlActual" class="w-full flex justify-center bg-black/5 p-2 rounded-neu-sm border border-neu-shadow-dark max-h-[70vh] overflow-auto">
+          <!-- Si es PDF -->
+          <iframe
+            v-if="esPdf(comprobanteUrlActual)"
+            :src="comprobanteUrlActual"
+            class="w-full h-[60vh] rounded-neu-sm border-0"
+          ></iframe>
+          <!-- Si es Imagen (PNG, JPG, WebP) -->
+          <img
+            v-else
+            :src="comprobanteUrlActual"
+            alt="Captura de pago adjunta"
+            class="max-h-[65vh] max-w-full object-contain rounded-neu-sm shadow-md"
+          />
+        </div>
+        <div v-else class="text-center py-6 text-neu-text-light text-sm">
+          No hay comprobante disponible.
+        </div>
+
+        <div class="flex justify-between items-center w-full mt-2">
+          <a
+            v-if="comprobanteUrlActual"
+            :href="comprobanteUrlActual"
+            download="comprobante_pago"
+            class="text-xs font-bold text-neu-green hover:underline flex items-center gap-1"
+          >
+            💾 Descargar Archivo
+          </a>
+          <div v-else></div>
+          <NeuButton type="button" @click="modalComprobanteAbierto = false">
+            Cerrar
+          </NeuButton>
+        </div>
+      </div>
+    </NeuModal>
   </AdminLayout>
 </template>
 
@@ -199,11 +238,19 @@ function obtenerNumeroApto(aptoId) {
   return apto ? apto.numero_apto : `#${aptoId}`
 }
 
+const modalComprobanteAbierto = ref(false)
+const comprobanteUrlActual = ref('')
+
+function esPdf(url) {
+  return url && (url.startsWith('data:application/pdf') || url.toLowerCase().includes('.pdf'))
+}
+
 function abrirComprobante(url) {
   if (url) {
-    window.open(url, '_blank')
+    comprobanteUrlActual.value = url
+    modalComprobanteAbierto.value = true
   } else {
-    toast.warning('No hay archivo adjunto')
+    toast.warning('No hay archivo adjunto para este pago')
   }
 }
 

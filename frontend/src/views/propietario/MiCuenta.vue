@@ -175,14 +175,14 @@
                   <EstadoConciliacionBadge :estado="pago.estado_conciliacion" />
                 </td>
                 <td class="py-3 text-center">
-                  <a
+                  <button
                     v-if="pago.comprobante_url"
-                    :href="pago.comprobante_url"
-                    target="_blank"
-                    class="text-xs text-neu-green hover:underline font-semibold"
+                    @click="abrirComprobante(pago.comprobante_url)"
+                    type="button"
+                    class="text-xs text-neu-green hover:underline font-semibold cursor-pointer"
                   >
-                    Ver archivo ↗
-                  </a>
+                    Ver archivo 👁️
+                  </button>
                   <span v-else class="text-xs text-neu-text-light">—</span>
                 </td>
               </tr>
@@ -196,6 +196,34 @@
         </div>
       </NeuCard>
     </div>
+
+    <!-- Modal para Visualizar Comprobante de Pago en Pantalla -->
+    <NeuModal v-model="modalComprobanteAbierto" title="Comprobante de Pago Reportado">
+      <div class="flex flex-col items-center gap-4">
+        <div v-if="comprobanteUrlActual" class="w-full flex justify-center bg-black/5 p-2 rounded-neu-sm border border-neu-shadow-dark max-h-[70vh] overflow-auto">
+          <iframe
+            v-if="esPdf(comprobanteUrlActual)"
+            :src="comprobanteUrlActual"
+            class="w-full h-[60vh] rounded-neu-sm border-0"
+          ></iframe>
+          <img
+            v-else
+            :src="comprobanteUrlActual"
+            alt="Captura de pago adjunta"
+            class="max-h-[65vh] max-w-full object-contain rounded-neu-sm shadow-md"
+          />
+        </div>
+        <div v-else class="text-center py-6 text-neu-text-light text-sm">
+          No hay comprobante disponible.
+        </div>
+
+        <div class="flex justify-end w-full mt-2">
+          <NeuButton type="button" @click="modalComprobanteAbierto = false">
+            Cerrar
+          </NeuButton>
+        </div>
+      </div>
+    </NeuModal>
   </PropietarioLayout>
 </template>
 
@@ -203,7 +231,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { PropietarioLayout } from '@/components/layout'
-import { NeuCard, NeuButton } from '@/components/neumorph'
+import { NeuCard, NeuButton, NeuModal } from '@/components/neumorph'
 import { EstadoPagoBadge, EstadoConciliacionBadge } from '@/components/shared'
 import { useAuthStore, useTasaStore, useRecibosStore, usePagosStore } from '@/stores'
 import { formatUSD, formatVES, formatTasa, formatFecha, formatPeriodo } from '@/utils'
@@ -246,6 +274,20 @@ async function cargarApartamento() {
     }
   } catch (e) {
     console.error('Error al cargar datos del apartamento:', e)
+  }
+}
+
+const modalComprobanteAbierto = ref(false)
+const comprobanteUrlActual = ref('')
+
+function esPdf(url) {
+  return url && (url.startsWith('data:application/pdf') || url.toLowerCase().includes('.pdf'))
+}
+
+function abrirComprobante(url) {
+  if (url) {
+    comprobanteUrlActual.value = url
+    modalComprobanteAbierto.value = true
   }
 }
 </script>
