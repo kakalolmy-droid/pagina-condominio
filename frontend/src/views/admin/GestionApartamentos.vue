@@ -1,27 +1,27 @@
 <template>
   <AdminLayout
-    titulo="Padrón de Inmuebles y Cuotas Mensuales"
-    subtitulo="Configuración de apartamentos, cuota fija mensual en USD y control de notificaciones"
+    titulo="Padrón de Inmuebles y Cuotas"
+    subtitulo="Configuración de apartamentos, cuota mensual en USD, meses pendientes y control de notificaciones"
   >
-    <!-- Widget de Resumen Financiero de Cuotas -->
+    <!-- Widget de Resumen Financiero -->
     <div class="mb-6">
       <NeuCard>
         <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
-            <h4 class="font-bold text-sm text-neu-green">Recaudación Mensual Estimada</h4>
+            <h4 class="font-bold text-sm text-neu-green">Total de Deuda por Cobrar</h4>
             <p class="text-xs text-neu-text-light">
-              Total proyectado sumando la cuota fija mensual de todos los apartamentos activos
+              Total proyectado sumando (Cuota Mensual × Meses Pendientes) de todos los apartamentos activos
             </p>
           </div>
           <div class="flex items-center gap-4">
             <div class="text-right">
-              <span class="text-xs text-neu-text-light">Total Activos a Cobrar:</span>
+              <span class="text-xs text-neu-text-light">Deuda Total Activa:</span>
               <p class="font-extrabold text-xl text-neu-green">
-                {{ formatUSD(cuotasInfo.suma_cuotas_usd || 0) }}
+                {{ formatUSD(totalDeudaGeneral) }}
               </p>
             </div>
             <span class="badge-success text-xs font-bold px-3 py-1.5 rounded-full">
-              {{ cuotasInfo.apartamentos_activos || 0 }} de {{ cuotasInfo.total_apartamentos || 0 }} Inmuebles Activos
+              {{ aptosActivos.length }} de {{ (aptosStore.lista || []).length }} Inmuebles Activos
             </span>
           </div>
         </div>
@@ -53,10 +53,11 @@
               <th class="pb-3 font-semibold">Inmueble / Apto</th>
               <th class="pb-3 font-semibold">Piso</th>
               <th class="pb-3 font-semibold">Torre</th>
-              <th class="pb-3 font-semibold">Cuota Fija Mensual</th>
+              <th class="pb-3 font-semibold">Cuota Mensual</th>
+              <th class="pb-3 font-semibold text-center">Meses Pendientes</th>
+              <th class="pb-3 font-semibold">Total Adeudado</th>
               <th class="pb-3 font-semibold">Propietario Asignado</th>
-              <th class="pb-3 font-semibold">Saldo a Favor</th>
-              <th class="pb-3 font-semibold text-center">Estado Notificación</th>
+              <th class="pb-3 font-semibold text-center">Estado</th>
               <th class="pb-3 font-semibold text-center">Acciones</th>
             </tr>
           </thead>
@@ -65,15 +66,23 @@
               v-for="apto in aptosFiltrados"
               :key="apto.id"
               class="border-b border-neu-bg-dark hover:bg-neu-bg-dark/50 transition-colors"
-              :class="{ 'opacity-60 bg-neu-bg-dark/30': apto.activo === false }"
+              :class="{ 'opacity-50 bg-neu-bg-dark/40': apto.activo === false }"
             >
               <td class="py-3 font-bold text-neu-green">
                 Apto {{ apto.numero_apto }}
               </td>
               <td class="py-3 text-neu-text">{{ apto.piso || 'PB' }}</td>
               <td class="py-3 text-neu-text">{{ apto.torre }}</td>
-              <td class="py-3 font-bold text-neu-green text-base">
+              <td class="py-3 font-semibold text-neu-text">
                 ${{ parseFloat(apto.alicuota || 15).toFixed(2) }} USD
+              </td>
+              <td class="py-3 text-center">
+                <span class="font-bold px-2.5 py-1 rounded-full text-xs" :class="(apto.meses_pendientes || 0) > 0 ? 'badge-danger' : 'badge-success'">
+                  {{ apto.meses_pendientes || 0 }} mes(es)
+                </span>
+              </td>
+              <td class="py-3 font-extrabold text-base" :class="(apto.meses_pendientes || 0) > 0 ? 'text-neu-danger' : 'text-neu-success'">
+                ${{ (parseFloat(apto.alicuota || 15) * (apto.meses_pendientes || 0)).toFixed(2) }} USD
               </td>
               <td class="py-3 text-neu-text">
                 <span v-if="apto.propietario">
@@ -82,9 +91,6 @@
                 <span v-else class="text-xs text-neu-danger italic font-semibold">
                   ⚠️ Sin asignar
                 </span>
-              </td>
-              <td class="py-3 font-semibold text-neu-green">
-                {{ formatUSD(apto.saldo_favor_usd) }}
               </td>
               <td class="py-3 text-center">
                 <span
@@ -109,7 +115,7 @@
                   <button
                     @click="abrirModalEditar(apto)"
                     class="p-2 rounded-neu-sm hover:shadow-neu-inset text-neu-green transition-all"
-                    title="Editar Cuota / Datos"
+                    title="Editar Cuota / Meses Pendientes"
                   >
                     ✏️
                   </button>
@@ -124,7 +130,7 @@
               </td>
             </tr>
             <tr v-if="aptosFiltrados.length === 0">
-              <td colspan="8" class="py-8 text-center text-neu-text-light">
+              <td colspan="9" class="py-8 text-center text-neu-text-light">
                 No hay apartamentos registrados.
               </td>
             </tr>
@@ -134,7 +140,7 @@
     </NeuCard>
 
     <!-- Modal Crear / Editar Apartamento -->
-    <NeuModal v-model="modalAbierto" :title="editandoId ? 'Editar Inmueble / Cuota' : 'Registrar Inmueble'">
+    <NeuModal v-model="modalAbierto" :title="editandoId ? 'Editar Inmueble y Deuda' : 'Registrar Inmueble'">
       <form @submit.prevent="guardarApartamento" class="flex flex-col gap-4">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <NeuInput
@@ -161,7 +167,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <NeuInput
             id="alicuota"
-            label="Monto de Cuota Mensual ($ USD)"
+            label="Cuota Mensual ($ USD)"
             v-model="form.alicuota"
             type="number"
             step="0.01"
@@ -170,25 +176,43 @@
             required
           />
 
-          <div class="flex flex-col gap-1">
-            <label class="text-sm font-medium text-neu-text-light">Propietario Titular</label>
-            <select v-model="form.propietario_id" class="input-neu" required>
-              <option :value="null" disabled>Seleccionar propietario...</option>
-              <option
-                v-for="usuario in usuariosStore.lista"
-                :key="usuario.id"
-                :value="usuario.id"
-              >
-                {{ usuario.nombre }} {{ usuario.apellido }} ({{ usuario.cedula }})
-              </option>
-            </select>
-          </div>
+          <NeuInput
+            id="meses_pendientes"
+            label="Meses Pendientes de Pago"
+            v-model="form.meses_pendientes"
+            type="number"
+            min="0"
+            placeholder="1"
+            required
+          />
+        </div>
+
+        <!-- Previsualización del cálculo -->
+        <div class="p-3 bg-neu-bg-dark rounded-neu-sm flex justify-between items-center">
+          <span class="text-xs text-neu-text-light font-semibold">Total Deuda Calculada:</span>
+          <span class="text-base font-extrabold text-neu-green">
+            ${{ ((parseFloat(form.alicuota) || 0) * (parseInt(form.meses_pendientes) || 0)).toFixed(2) }} USD
+          </span>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-sm font-medium text-neu-text-light">Propietario Titular</label>
+          <select v-model="form.propietario_id" class="input-neu" required>
+            <option :value="null" disabled>Seleccionar propietario...</option>
+            <option
+              v-for="usuario in usuariosStore.lista"
+              :key="usuario.id"
+              :value="usuario.id"
+            >
+              {{ usuario.nombre }} {{ usuario.apellido }} ({{ usuario.cedula }})
+            </option>
+          </select>
         </div>
 
         <div class="flex items-center gap-2 p-3 bg-neu-bg-dark rounded-neu-sm border border-neu-shadow-dark">
           <input type="checkbox" id="apto_activo" v-model="form.activo" class="w-4 h-4 cursor-pointer accent-neu-green" />
           <label for="apto_activo" class="text-xs font-semibold text-neu-text cursor-pointer">
-            Inmueble Activo (Recibe avisos automáticos por WhatsApp y emite cuota mensual)
+            Inmueble Activo (Recibe avisos automáticos por WhatsApp con su saldo exacto)
           </label>
         </div>
 
@@ -222,13 +246,13 @@ const busqueda = ref('')
 const modalAbierto = ref(false)
 const editandoId = ref(null)
 const guardando = ref(false)
-const cuotasInfo = ref({ total_apartamentos: 0, apartamentos_activos: 0, suma_cuotas_usd: 0 })
 
 const form = ref({
   numero_apto: '',
   piso: '',
   torre: 'Principal',
   alicuota: 15.00,
+  meses_pendientes: 1,
   activo: true,
   propietario_id: null,
 })
@@ -245,22 +269,24 @@ const aptosFiltrados = computed(() => {
   )
 })
 
+const aptosActivos = computed(() => {
+  return (aptosStore.lista || []).filter(a => a.activo !== false)
+})
+
+const totalDeudaGeneral = computed(() => {
+  return aptosActivos.value.reduce((acc, a) => {
+    const cuota = parseFloat(a.alicuota) || 15.0
+    const meses = parseInt(a.meses_pendientes) || 0
+    return acc + (cuota * meses)
+  }, 0)
+})
+
 onMounted(async () => {
   await Promise.all([
     aptosStore.cargar(),
     usuariosStore.cargar(),
-    verificarCuotas(),
   ])
 })
-
-async function verificarCuotas() {
-  try {
-    const { data } = await apartamentosService.sumaAlicuotas()
-    cuotasInfo.value = data
-  } catch (e) {
-    console.error(e)
-  }
-}
 
 function abrirModalCrear() {
   editandoId.value = null
@@ -269,6 +295,7 @@ function abrirModalCrear() {
     piso: '',
     torre: 'Principal',
     alicuota: 15.00,
+    meses_pendientes: 1,
     activo: true,
     propietario_id: usuariosStore.lista[0]?.id || null,
   }
@@ -282,6 +309,7 @@ function abrirModalEditar(apto) {
     piso: apto.piso || '',
     torre: apto.torre || 'Principal',
     alicuota: parseFloat(apto.alicuota || 15.00),
+    meses_pendientes: parseInt(apto.meses_pendientes !== undefined ? apto.meses_pendientes : 1),
     activo: apto.activo !== false,
     propietario_id: apto.propietario_id,
   }
@@ -290,12 +318,13 @@ function abrirModalEditar(apto) {
 
 async function alternarEstado(apto) {
   try {
-    const estadoActual = apto.activo !== false
-    await apartamentosService.actualizar(apto.id, { activo: !estadoActual })
-    apto.activo = !estadoActual
+    const nuevoEstado = apto.activo === false ? true : false
+    const { data } = await apartamentosService.actualizar(apto.id, { activo: nuevoEstado })
+    apto.activo = data.activo
     toast.info(apto.activo ? `Apto ${apto.numero_apto} reactivado` : `Apto ${apto.numero_apto} desactivado de avisos y cobros`)
-    await Promise.all([aptosStore.cargar(), verificarCuotas()])
+    await aptosStore.cargar()
   } catch (error) {
+    console.error('Error cambiando estado:', error)
     toast.error('Error al cambiar estado del apartamento')
   }
 }
@@ -305,13 +334,13 @@ async function guardarApartamento() {
   try {
     if (editandoId.value) {
       await aptosStore.actualizar(editandoId.value, form.value)
-      toast.success('Apartamento actualizado con éxito')
+      toast.success('Apartamento y estado de cuenta actualizados')
     } else {
       await aptosStore.crear(form.value)
       toast.success('Apartamento registrado con éxito')
     }
     modalAbierto.value = false
-    await Promise.all([aptosStore.cargar(), verificarCuotas()])
+    await aptosStore.cargar()
   } catch (error) {
     toast.error(error.response?.data?.detail || 'Error al guardar el apartamento')
   } finally {
@@ -324,7 +353,7 @@ async function confirmarEliminacion(apto) {
     try {
       await aptosStore.eliminar(apto.id)
       toast.success('Apartamento eliminado')
-      await verificarCuotas()
+      await aptosStore.cargar()
     } catch (error) {
       toast.error('Error al eliminar apartamento')
     }

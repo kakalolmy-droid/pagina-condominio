@@ -33,9 +33,7 @@ def emitir_recibos_mes(db: Session, request: EmisionMasivaRequest) -> list[Recib
         if existente:
             continue
 
-        # Usa la cuota mensual fija configurada en el apartamento (ej: $15.00)
-        # o el monto enviado en el request si se especificó
-        monto = Decimal(str(apto.alicuota)) if (apto.alicuota and apto.alicuota > 0) else Decimal(str(request.gasto_total_usd))
+        monto = Decimal(str(apto.alicuota)) if (apto.alicuota and apto.alicuota > 0) else Decimal("15.00")
         
         recibo = Recibo(
             apartamento_id=apto.id,
@@ -58,7 +56,7 @@ def emitir_recibos_mes(db: Session, request: EmisionMasivaRequest) -> list[Recib
 def obtener_matriz_deudas(db: Session) -> list[dict]:
     """
     Genera la matriz completa de deudas de todos los apartamentos.
-    Incluye conversión a VES con la tasa BCV actual.
+    Calcula la deuda multiplicando la cuota mensual por los meses pendientes.
     """
     try:
         tasa = obtener_tasa_actual(db)
@@ -70,31 +68,28 @@ def obtener_matriz_deudas(db: Session) -> list[dict]:
     matriz = []
 
     for apto in apartamentos:
-        recibos_pendientes = [
-            r for r in apto.recibos
-            if r.estado_pago in ("pendiente", "parcial")
-        ]
-        deuda_usd = sum(r.monto_pendiente_usd for r in recibos_pendientes)
-        deuda_ves = round(deuda_usd * tasa_valor, 2) if tasa_valor else Decimal("0")
-        meses = [r.mes_periodo for r in recibos_pendientes]
-        estado = "solvente" if deuda_usd == 0 else (
-            "parcial" if any(r.estado_pago == "parcial" for r in recibos_pendientes) else "moroso"
-        )
+        cuota_mensual = float(apto.alicuota or 15.0)
+        meses_pend = int(apto.meses_pendientes if apto.meses_pendientes is not None else 1)
+        
+        deuda_usd = round(cuota_mensual * meses_pend, 2)
+        deuda_ves = round(deuda_usd * float(tasa_valor), 2) if tasa_valor else 0.0
+        estado = "solvente" if meses_pend == 0 else "moroso"
 
         matriz.append({
             "apartamento_id": apto.id,
             "numero_apto": apto.numero_apto,
             "piso": apto.piso,
             "torre": apto.torre,
-            "cuota_mensual_usd": float(apto.alicuota or 15.0),
+            "cuota_mensual_usd": cuota_mensual,
+            "meses_pendientes": meses_pend,
             "activo": bool(apto.activo),
             "propietario": f"{apto.propietario.nombre} {apto.propietario.apellido}" if apto.propietario else "-",
             "telefono": apto.propietario.telefono_whatsapp if apto.propietario else "-",
             "email": apto.propietario.email if apto.propietario else "-",
-            "deuda_total_usd": float(deuda_usd),
-            "deuda_total_ves": float(deuda_ves),
+            "deuda_total_usd": deuda_usd,
+            "deuda_total_ves": deuda_ves,
             "saldo_favor_usd": float(apto.saldo_favor_usd or 0),
-            "meses_adeudados": meses,
+            "meses_adeudados": [f"{meses_pend} mes(es)"],
             "estado": estado,
         })
 

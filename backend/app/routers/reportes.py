@@ -57,7 +57,7 @@ async def enviar_masivo_automatico(
 ):
     """
     Envía DIRECTA y AUTOMÁTICAMENTE a todos los teléfonos vinculados por WhatsApp
-    con toda la información de recaudación y link de pago (SOLO APARTAMENTOS Y USUARIOS ACTIVOS).
+    con toda la información de recaudación, cuota, meses pendientes y total a pagar.
     """
     tasa = obtener_tasa_actual(db)
     tasa_valor = float(tasa.tasa_usd_ves)
@@ -68,7 +68,6 @@ async def enviar_masivo_automatico(
     zelle = payload.zelle or "pagos@edificioalcatraz.com"
     portal_url = "https://pagina-condominio.vercel.app/mi-cuenta/pagar"
 
-    # Filtrar solo apartamentos ACTIVOS
     aptos = db.query(Apartamento).filter(
         Apartamento.propietario_id != None,
         Apartamento.activo == True
@@ -80,33 +79,25 @@ async def enviar_masivo_automatico(
     async with httpx.AsyncClient(timeout=15.0) as client:
         for apto in aptos:
             p = apto.propietario
-            # Si el propietario está marcado como INACTIVO o no tiene teléfono, no se le envía nada
             if not p or not p.activo or not p.telefono_whatsapp:
                 continue
 
-            recibo = (
-                db.query(Recibo)
-                .filter(
-                    Recibo.apartamento_id == apto.id,
-                    Recibo.mes_periodo == payload.periodo,
-                )
-                .first()
-            )
-
-            if recibo:
-                monto_usd = float(recibo.monto_pendiente_usd)
-            else:
-                monto_usd = float(apto.alicuota or 15.00)
-
+            cuota_mes = float(apto.alicuota or 15.00)
+            meses_pend = int(apto.meses_pendientes if apto.meses_pendientes is not None else 1)
+            
+            # Monto total calculado según la cuota y la cantidad de meses pendientes
+            monto_usd = round(cuota_mes * meses_pend, 2)
             monto_ves = round(monto_usd * tasa_valor, 2)
 
             msg = (
                 f"🏢 *{settings.condominio_nombre} — AVISO DE COBRO*\n\n"
                 f"Estimado/a *{p.nombre} {p.apellido}* (Apto *{apto.numero_apto}*),\n\n"
-                f"Le informamos los datos de pago para el período *{payload.periodo}*:\n"
-                f"💵 *Monto Total:* ${monto_usd:.2f} USD\n"
-                f"🇻🇪 *Equivalente en Bs:* {monto_ves:,.2f} VES (Tasa BCV oficial: Bs. {tasa_valor:.4f})\n"
-                f"📅 *Fecha Límite de Pago:* {payload.fecha_limite}\n\n"
+                f"Le informamos el estado de su cuenta de condominio para el período *{payload.periodo}*:\n"
+                f"💵 *Cuota Mensual:* ${cuota_mes:.2f} USD\n"
+                f"📌 *Meses Pendientes:* {meses_pend} mes(es)\n"
+                f"💰 *TOTAL A PAGAR:* ${monto_usd:.2f} USD\n"
+                f"🇻🇪 *Equivalente en Bs:* {monto_ves:,.2f} VES (Tasa BCV: Bs. {tasa_valor:.4f})\n"
+                f"📅 *Fecha Límite:* {payload.fecha_limite}\n\n"
                 f"📌 *DATOS OFICIALES DE RECAUDACIÓN:*\n"
                 f"• Banco: {banco}\n"
                 f"• Pago Móvil: {pago_movil}\n"
@@ -114,7 +105,7 @@ async def enviar_masivo_automatico(
                 f"• Zelle: {zelle}\n\n"
                 f"🔗 *Reporte su pago y suba su comprobante directamente aquí:*\n"
                 f"{portal_url}\n\n"
-                f"{payload.nota_adicional or '¡Gracias por su colaboración y puntualidad!'}"
+                f"{payload.nota_adicional or '¡Gracias por su puntualidad y colaboración!'}"
             )
 
             tel_limpio = "".join(filter(str.isdigit, p.telefono_whatsapp))
