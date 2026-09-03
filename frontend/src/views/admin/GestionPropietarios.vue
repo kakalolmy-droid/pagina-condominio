@@ -40,7 +40,7 @@
               v-for="usuario in usuariosFiltrados"
               :key="usuario.id"
               class="border-b border-neu-bg-dark hover:bg-neu-bg-dark/50 transition-colors"
-              :class="{ 'opacity-60 bg-neu-bg-dark/30': usuario.activo === false }"
+              :class="{ 'opacity-50 bg-neu-bg-dark/40': usuario.activo === false }"
             >
               <td class="py-3 font-semibold text-neu-green">
                 {{ usuario.nombre }} {{ usuario.apellido }}
@@ -64,9 +64,9 @@
               <td class="py-3 text-center">
                 <span
                   class="text-xs font-bold px-3 py-1 rounded-full inline-block"
-                  :class="usuario.activo !== false ? 'badge-success' : 'badge-danger'"
+                  :class="usuario.activo === false ? 'badge-danger' : 'badge-success'"
                 >
-                  {{ usuario.activo !== false ? '● Activo' : '○ Desactivado' }}
+                  {{ usuario.activo === false ? '○ Desactivado' : '● Activo' }}
                 </span>
               </td>
               <td class="py-3 text-center">
@@ -75,10 +75,10 @@
                   <button
                     @click="alternarEstado(usuario)"
                     class="px-2.5 py-1.5 rounded-neu-sm text-xs font-bold shadow-neu-sm hover:shadow-neu-inset transition-all cursor-pointer flex items-center gap-1"
-                    :class="usuario.activo !== false ? 'bg-amber-600 text-white' : 'bg-emerald-700 text-white'"
-                    :title="usuario.activo !== false ? 'Desactivar usuario para que no reciba avisos ni pueda ingresar' : 'Reactivar usuario'"
+                    :class="usuario.activo === false ? 'bg-emerald-700 text-white' : 'bg-amber-600 text-white'"
+                    :title="usuario.activo === false ? 'Reactivar usuario' : 'Desactivar usuario para que no reciba avisos ni pueda ingresar'"
                   >
-                    <span>{{ usuario.activo !== false ? '⏸️ Desactivar' : '▶️ Reactivar' }}</span>
+                    <span>{{ usuario.activo === false ? '▶️ Reactivar' : '⏸️ Desactivar' }}</span>
                   </button>
 
                   <button
@@ -270,12 +270,13 @@ function abrirModalEditar(usuario) {
 
 async function alternarEstado(usuario) {
   try {
-    const estadoActual = usuario.activo !== false
-    await usuariosService.actualizar(usuario.id, { activo: !estadoActual })
-    usuario.activo = !estadoActual
+    const nuevoEstado = usuario.activo === false ? true : false
+    const { data } = await usuariosService.actualizar(usuario.id, { activo: nuevoEstado })
+    usuario.activo = data.activo
     toast.info(usuario.activo ? `Propietario ${usuario.nombre} reactivado` : `Propietario ${usuario.nombre} desactivado (no recibirá avisos)`)
     await usuariosStore.cargar()
   } catch (error) {
+    console.error('Error alternando estado:', error)
     toast.error('Error al cambiar el estado del usuario')
   }
 }
