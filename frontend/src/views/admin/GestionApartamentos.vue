@@ -65,7 +65,7 @@
               v-for="apto in aptosFiltrados"
               :key="apto.id"
               class="border-b border-neu-bg-dark hover:bg-neu-bg-dark/50 transition-colors"
-              :class="{ 'opacity-60 bg-neu-bg-dark/30': !apto.activo }"
+              :class="{ 'opacity-60 bg-neu-bg-dark/30': apto.activo === false }"
             >
               <td class="py-3 font-bold text-neu-green">
                 Apto {{ apto.numero_apto }}
@@ -89,9 +89,9 @@
               <td class="py-3 text-center">
                 <span
                   class="text-xs font-bold px-3 py-1 rounded-full inline-block"
-                  :class="apto.activo ? 'badge-success' : 'badge-danger'"
+                  :class="apto.activo !== false ? 'badge-success' : 'badge-danger'"
                 >
-                  {{ apto.activo ? '● Activo' : '○ Desactivado' }}
+                  {{ apto.activo !== false ? '● Activo' : '○ Desactivado' }}
                 </span>
               </td>
               <td class="py-3 text-center">
@@ -100,10 +100,10 @@
                   <button
                     @click="alternarEstado(apto)"
                     class="px-2.5 py-1.5 rounded-neu-sm text-xs font-bold shadow-neu-sm hover:shadow-neu-inset transition-all cursor-pointer flex items-center gap-1"
-                    :class="apto.activo ? 'bg-amber-600 text-white' : 'bg-emerald-700 text-white'"
-                    :title="apto.activo ? 'Desactivar para que no reciba cobros ni avisos' : 'Reactivar cobros y avisos'"
+                    :class="apto.activo !== false ? 'bg-amber-600 text-white' : 'bg-emerald-700 text-white'"
+                    :title="apto.activo !== false ? 'Desactivar para que no reciba cobros ni avisos' : 'Reactivar cobros y avisos'"
                   >
-                    <span>{{ apto.activo ? '⏸️ Desactivar' : '▶️ Reactivar' }}</span>
+                    <span>{{ apto.activo !== false ? '⏸️ Desactivar' : '▶️ Reactivar' }}</span>
                   </button>
 
                   <button
@@ -290,10 +290,11 @@ function abrirModalEditar(apto) {
 
 async function alternarEstado(apto) {
   try {
-    await apartamentosService.toggleActivo(apto.id)
-    apto.activo = !apto.activo
+    const estadoActual = apto.activo !== false
+    await apartamentosService.actualizar(apto.id, { activo: !estadoActual })
+    apto.activo = !estadoActual
     toast.info(apto.activo ? `Apto ${apto.numero_apto} reactivado` : `Apto ${apto.numero_apto} desactivado de avisos y cobros`)
-    await verificarCuotas()
+    await Promise.all([aptosStore.cargar(), verificarCuotas()])
   } catch (error) {
     toast.error('Error al cambiar estado del apartamento')
   }
