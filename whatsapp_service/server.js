@@ -207,12 +207,14 @@ function proxyToFastAPI(req, res) {
     });
 
     if (req.body && Object.keys(req.body).length > 0) {
-        const bodyData = JSON.stringify(req.body);
+        const bodyData = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
         proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
-        proxyReq.setHeader('Content-Type', 'application/json');
         proxyReq.write(bodyData);
+        proxyReq.end();
+    } else {
+        // Soporte completo para subida de comprobantes multipart/form-data
+        req.pipe(proxyReq);
     }
-    proxyReq.end();
 }
 
 app.use((req, res) => {

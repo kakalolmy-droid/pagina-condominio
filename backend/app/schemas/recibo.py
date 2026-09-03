@@ -18,6 +18,7 @@ class ReciboOut(ReciboBase):
     id: int
     monto_pendiente_usd: Decimal
     estado_pago: str
+    ultimo_pago_estado: Optional[str] = None
     class Config:
         from_attributes = True
 

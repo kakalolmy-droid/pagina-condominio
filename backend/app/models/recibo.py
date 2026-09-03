@@ -18,3 +18,10 @@ class Recibo(Base):
     # Relaciones
     apartamento = relationship("Apartamento", back_populates="recibos")
     pagos = relationship("Pago", back_populates="recibo")
+
+    @property
+    def ultimo_pago_estado(self):
+        if self.pagos:
+            return self.pagos[-1].estado_conciliacion
+        return None
+
