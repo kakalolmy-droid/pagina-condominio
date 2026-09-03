@@ -47,44 +47,52 @@ async def reportar_pago(
     db: Session = Depends(get_db),
     usuario_actual: Usuario = Depends(get_usuario_actual),
 ):
-    """Registra un pago reportado por el propietario."""
-    apto = db.query(Apartamento).filter(
-        Apartamento.propietario_id == usuario_actual.id
-    ).first()
-    if not apto:
-        raise HTTPException(status_code=404, detail="No tiene apartamento registrado")
+    try:
+        """Registra un pago reportado por el propietario."""
+        apto = db.query(Apartamento).filter(
+            Apartamento.propietario_id == usuario_actual.id
+        ).first()
+        if not apto:
+            raise HTTPException(status_code=404, detail="No tiene apartamento registrado")
 
-    recibo = db.query(Recibo).filter(
-        Recibo.id == recibo_id,
-        Recibo.apartamento_id == apto.id,
-    ).first()
-    if not recibo:
-        raise HTTPException(status_code=404, detail="Recibo no encontrado o no le pertenece")
-    if recibo.estado_pago == "pagado":
-        raise HTTPException(status_code=400, detail="Este recibo ya está completamente pagado")
+        recibo = db.query(Recibo).filter(
+            Recibo.id == recibo_id,
+            Recibo.apartamento_id == apto.id,
+        ).first()
+        if not recibo:
+            raise HTTPException(status_code=404, detail="Recibo no encontrado o no le pertenece")
+        if recibo.estado_pago == "pagado":
+            raise HTTPException(status_code=400, detail="Este recibo ya está completamente pagado")
 
-    tasa = obtener_tasa_actual(db)
-    if moneda_pago == "VES":
-        monto_usd = convertir_ves_a_usd(monto_declarado, tasa.tasa_usd_ves)
-    else:
-        monto_usd = monto_declarado
+        tasa = obtener_tasa_actual(db)
+        if moneda_pago == "VES":
+            monto_usd = convertir_ves_a_usd(monto_declarado, tasa.tasa_usd_ves)
+        else:
+            monto_usd = monto_declarado
 
-    comprobante_url = await subir_comprobante(comprobante, apto.id)
+        comprobante_url = await subir_comprobante(comprobante, apto.id)
 
-    pago = Pago(
-        apartamento_id=apto.id,
-        recibo_id=recibo_id,
-        metodo_pago=metodo_pago,
-        banco_origen=banco_origen,
-        referencia_bancaria=referencia_bancaria,
-        monto_declarado=monto_declarado,
-        moneda_pago=moneda_pago,
-        tasa_bcv_aplicada=tasa.tasa_usd_ves,
-        monto_equivalente_usd=monto_usd,
-        comprobante_url=comprobante_url,
-        estado_conciliacion="en_revision",
-    )
-    db.add(pago)
-    db.commit()
-    db.refresh(pago)
-    return pago
+        pago = Pago(
+            apartamento_id=apto.id,
+            recibo_id=recibo_id,
+            metodo_pago=metodo_pago,
+            banco_origen=banco_origen,
+            referencia_bancaria=referencia_bancaria,
+            monto_declarado=monto_declarado,
+            moneda_pago=moneda_pago,
+            tasa_bcv_aplicada=tasa.tasa_usd_ves,
+            monto_equivalente_usd=monto_usd,
+            comprobante_url=comprobante_url,
+            estado_conciliacion="en_revision",
+        )
+        db.add(pago)
+        db.commit()
+        db.refresh(pago)
+        return pago
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error en servidor al guardar pago: {str(e)}")
