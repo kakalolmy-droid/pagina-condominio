@@ -25,7 +25,11 @@ async def subir_comprobante(archivo: UploadFile, apartamento_id: int) -> str:
     Sube el comprobante de pago a Cloudinary.
     Retorna la URL segura del archivo.
     """
-    if archivo.content_type not in FORMATOS_PERMITIDOS:
+    raw_ct = (archivo.content_type or "").lower().split(";")[0].strip()
+    nombre = (archivo.filename or "").lower()
+    es_valido = raw_ct in FORMATOS_PERMITIDOS or raw_ct.startswith("image/") or any(nombre.endswith(ext) for ext in [".jpg", ".jpeg", ".png", ".webp", ".pdf", ".heic"])
+
+    if not es_valido:
         raise HTTPException(
             status_code=400,
             detail="Formato no permitido. Use: JPG, PNG, WebP o PDF",

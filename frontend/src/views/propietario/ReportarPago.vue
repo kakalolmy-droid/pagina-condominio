@@ -227,7 +227,14 @@ async function enviarPago() {
     toast.success('¡Pago reportado con éxito! Se encuentra en revisión.')
     await router.push('/mi-cuenta/inicio')
   } catch (error) {
-    toast.error(error.response?.data?.detail || 'Error al reportar el pago')
+    const detalle = error.response?.data?.detail
+    if (Array.isArray(detalle)) {
+      toast.error(detalle.map(d => d.msg || d).join(', '))
+    } else if (typeof detalle === 'string') {
+      toast.error(detalle)
+    } else {
+      toast.error('Error al reportar el pago. Por favor verifica los datos o vuelve a iniciar sesión.')
+    }
   } finally {
     enviando.value = false
   }
