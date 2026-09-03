@@ -6,6 +6,7 @@ from datetime import datetime
 from decimal import Decimal
 from app.database import get_db
 from app.models.pago import Pago
+from app.models.recibo import Recibo
 from app.schemas.pago import PagoOut
 from app.services.pdf_generator import generar_pdf_solvencia
 from app.auth.dependencies import require_admin, get_usuario_actual
@@ -91,7 +92,7 @@ def aprobar_pago(
         )
         if propietario and propietario.telefono_whatsapp:
             enviar_whatsapp.delay(propietario.telefono_whatsapp, msg)
-    except Exception:
+    except BaseException:
         pass
 
     return pago
