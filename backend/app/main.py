@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from sqlalchemy import text
 from app.models import *  # noqa
 from app.database import Base, engine, SessionLocal
 from app.auth.jwt_handler import hash_password
@@ -16,10 +17,23 @@ settings = get_settings()
 
 
 def auto_seed_database():
-    """Auto-inicializa tablas y datos de prueba si la base de datos está vacía (Cloud / Render)."""
+    """Auto-inicializa tablas, aplica migraciones dinámicas y datos de prueba (Cloud / Render)."""
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
+        # Migración automática de columnas 'activo' si la tabla ya existía en SQLite sin ellas
+        with engine.connect() as conn:
+            try:
+                conn.execute(text("ALTER TABLE usuarios ADD COLUMN activo BOOLEAN DEFAULT 1"))
+                conn.commit()
+            except Exception:
+                pass
+            try:
+                conn.execute(text("ALTER TABLE apartamentos ADD COLUMN activo BOOLEAN DEFAULT 1"))
+                conn.commit()
+            except Exception:
+                pass
+
         admin = db.query(Usuario).filter(Usuario.email == "admin@alcatraz.com").first()
         if not admin:
             admin = Usuario(
@@ -30,6 +44,7 @@ def auto_seed_database():
                 cedula="V-00000001",
                 telefono_whatsapp="+584120000000",
                 rol="admin",
+                activo=True,
             )
             db.add(admin)
 
@@ -42,6 +57,7 @@ def auto_seed_database():
                 cedula="V-12345678",
                 telefono_whatsapp="+584127040138",
                 rol="propietario",
+                activo=True,
             )
             lormy = Usuario(
                 email="lormym48@gmail.com",
@@ -51,6 +67,7 @@ def auto_seed_database():
                 cedula="V-87654321",
                 telefono_whatsapp="+584226410044",
                 rol="propietario",
+                activo=True,
             )
             db.add_all([cesar, lormy])
             db.commit()
@@ -60,14 +77,16 @@ def auto_seed_database():
                 numero_apto="2-6",
                 piso=2,
                 torre="A",
-                alicuota=Decimal("0.0500"),
+                alicuota=Decimal("15.00"),
+                activo=True,
                 propietario_id=cesar.id,
             )
             apto2 = Apartamento(
                 numero_apto="2-5",
                 piso=2,
                 torre="A",
-                alicuota=Decimal("0.0500"),
+                alicuota=Decimal("15.00"),
+                activo=True,
                 propietario_id=lormy.id,
             )
             db.add_all([apto1, apto2])
@@ -77,6 +96,11 @@ def auto_seed_database():
             db.add(tasa_ini)
             db.commit()
             print("🌱 Base de datos auto-inicializada con usuarios de prueba en la nube.")
+        else:
+            # Asegurar que todos los usuarios tengan activo=True si estaba en null
+            db.execute(text("UPDATE usuarios SET activo = 1 WHERE activo IS NULL"))
+            db.execute(text("UPDATE apartamentos SET activo = 1 WHERE activo IS NULL"))
+            db.commit()
     except Exception as e:
         print(f"Nota en auto_seed: {e}")
     finally:
