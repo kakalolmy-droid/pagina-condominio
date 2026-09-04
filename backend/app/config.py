@@ -31,7 +31,7 @@ class Settings(BaseSettings):
 
     # Condominio
     condominio_nombre: str = "Edificio Alcatraz"
-    condominio_rif: str = ""
+    condominio_rif: str = "J-30806007-0"
     condominio_banco: str = "Banco de Venezuela (0102)"
     condominio_cuenta: str = "0102-0000-00-0000000000"
     condominio_pago_movil: str = "0414-1234567 | C.I. V-00000001"

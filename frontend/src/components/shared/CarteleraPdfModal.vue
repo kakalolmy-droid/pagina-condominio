@@ -48,7 +48,7 @@
                     JUNTA DE CONDOMINIO EDIFICIO ALCATRAZ
                   </h1>
                   <p class="text-xs text-neutral-600 m-0 mt-0.5 font-medium">
-                    RIF: J-50384992-0
+                    RIF: J-30806007-0
                   </p>
                   <p class="text-xs text-neutral-600 m-0 font-medium">
                     Fecha de Emisión: <strong class="text-neutral-900">{{ fechaActual }}</strong>
