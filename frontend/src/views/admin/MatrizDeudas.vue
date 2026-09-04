@@ -29,14 +29,24 @@
         </button>
       </div>
 
-      <!-- Buscador -->
-      <div class="w-full sm:w-72">
-        <input
-          v-model="busqueda"
-          type="text"
-          placeholder="Buscar apartamento o propietario..."
-          class="input-neu text-sm py-2"
-        />
+      <!-- Buscador y botón de Cartelera PDF -->
+      <div class="w-full sm:w-auto flex flex-col sm:flex-row items-center gap-3">
+        <div class="w-full sm:w-64">
+          <input
+            v-model="busqueda"
+            type="text"
+            placeholder="Buscar apartamento o propietario..."
+            class="input-neu text-sm py-2"
+          />
+        </div>
+
+        <button
+          @click="mostrarModalPDF = true"
+          class="w-full sm:w-auto px-4 py-2 rounded-neu-sm bg-neu-green hover:bg-neu-green-dark text-white font-bold text-xs shadow-neu flex items-center justify-center gap-1.5 cursor-pointer transition-all whitespace-nowrap"
+        >
+          <span>📄</span>
+          <span>Cartelera PDF</span>
+        </button>
       </div>
     </div>
 
@@ -105,6 +115,13 @@
         </table>
       </div>
     </NeuCard>
+
+    <!-- Modal de Cartelera de Morosidad para Descarga / Impresión en PDF -->
+    <CarteleraPdfModal
+      v-model="mostrarModalPDF"
+      :matriz="matriz"
+      :tasa="tasaStore.tasaActual"
+    />
   </AdminLayout>
 </template>
 
@@ -112,13 +129,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { AdminLayout } from '@/components/layout'
 import { NeuCard } from '@/components/neumorph'
-import { EstadoPagoBadge } from '@/components/shared'
+import { EstadoPagoBadge, CarteleraPdfModal } from '@/components/shared'
 import { useApartamentosStore, useTasaStore } from '@/stores'
 import { formatUSD, formatVES } from '@/utils'
 
 const aptosStore = useApartamentosStore()
 const tasaStore = useTasaStore()
 
+const mostrarModalPDF = ref(false)
 const filtroEstado = ref('')
 const busqueda = ref('')
 

@@ -108,9 +108,18 @@
     <NeuCard>
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-bold text-neu-green">Resumen de Morosidad y Cobranza</h2>
-        <RouterLink to="/admin/deudas" class="text-sm font-medium text-neu-green hover:underline">
-          Ver matriz completa ➔
-        </RouterLink>
+        <div class="flex items-center gap-4">
+          <button
+            @click="mostrarModalPDF = true"
+            class="text-xs font-bold text-neu-green hover:underline flex items-center gap-1 cursor-pointer"
+          >
+            <span>📄</span>
+            <span>Cartelera PDF</span>
+          </button>
+          <RouterLink to="/admin/deudas" class="text-sm font-medium text-neu-green hover:underline">
+            Ver matriz completa ➔
+          </RouterLink>
+        </div>
       </div>
 
       <div class="overflow-x-auto">
@@ -151,6 +160,13 @@
         </table>
       </div>
     </NeuCard>
+
+    <!-- Modal de Cartelera de Morosidad PDF -->
+    <CarteleraPdfModal
+      v-model="mostrarModalPDF"
+      :matriz="matriz"
+      :tasa="tasaStore.tasaActual"
+    />
   </AdminLayout>
 </template>
 
@@ -160,7 +176,7 @@ import { RouterLink } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { AdminLayout } from '@/components/layout'
 import { NeuCard } from '@/components/neumorph'
-import { EstadoPagoBadge } from '@/components/shared'
+import { EstadoPagoBadge, CarteleraPdfModal } from '@/components/shared'
 import { useTasaStore, useApartamentosStore } from '@/stores'
 import { formatUSD, formatVES, formatTasa, formatFecha } from '@/utils'
 import { tasaService } from '@/services'
@@ -168,6 +184,8 @@ import { tasaService } from '@/services'
 const toast = useToast()
 const tasaStore = useTasaStore()
 const aptosStore = useApartamentosStore()
+
+const mostrarModalPDF = ref(false)
 
 const sincronizando = ref(false)
 const matriz = computed(() => aptosStore.matrizDeudas || [])

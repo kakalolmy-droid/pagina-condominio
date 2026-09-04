@@ -223,8 +223,8 @@
       </div>
     </NeuCard>
 
-    <!-- Exportación a Excel -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Exportación a Excel y Cartelera Oficial en PDF -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
       <NeuCard>
         <div class="flex items-center gap-3 mb-3">
           <span class="text-3xl">📊</span>
@@ -252,25 +252,35 @@
         </div>
       </NeuCard>
 
-      <NeuCard>
+      <!-- Cartelera Oficial de Morosidad en PDF -->
+      <NeuCard class="border border-neu-green/30">
         <div class="flex items-center gap-3 mb-3">
-          <span class="text-3xl">💱</span>
+          <span class="text-3xl">📄</span>
           <div>
-            <h3 class="text-lg font-bold text-neu-green">Tasa Oficial BCV Aplicada</h3>
+            <h3 class="text-lg font-bold text-neu-green">Cartelera Oficial de Morosidad (PDF)</h3>
             <p class="text-xs text-neu-text-light">
-              Sincronizada automáticamente desde el Banco Central de Venezuela
+              Reporte público para ascensores y cartelera (solo apartamentos y deudas, sin nombres privados)
             </p>
           </div>
         </div>
 
-        <div class="mt-4 p-4 bg-neu-bg-dark rounded-neu-sm border border-neu-shadow-dark flex justify-between items-center">
-          <span class="text-xs text-neu-text-light">Tasa del día:</span>
-          <span class="font-bold text-lg text-neu-green">
-            {{ tasaStore.tasaActual ? formatTasa(tasaStore.tasaActual) : 'Cargando...' }}
+        <div class="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-neu-shadow-dark">
+          <span class="text-xs text-neu-text-light">
+            Formato oficial listo para imprimir o guardar en PDF
           </span>
+          <NeuButton variant="primary" @click="abrirCarteleraPDF">
+            📄 Descargar Cartelera PDF
+          </NeuButton>
         </div>
       </NeuCard>
     </div>
+
+    <!-- Modal de Cartelera de Morosidad PDF -->
+    <CarteleraPdfModal
+      v-model="mostrarModalCarteleraPDF"
+      :matriz="aptosStore.matrizDeudas"
+      :tasa="tasaStore.tasaActual"
+    />
   </AdminLayout>
 </template>
 
@@ -279,13 +289,16 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { AdminLayout } from '@/components/layout'
 import { NeuCard, NeuButton, NeuInput } from '@/components/neumorph'
+import { CarteleraPdfModal } from '@/components/shared'
 import { reportesService, configuracionService, api } from '@/services'
-import { useTasaStore } from '@/stores'
+import { useTasaStore, useApartamentosStore } from '@/stores'
 import { formatTasa, periodoActual } from '@/utils'
 
 const toast = useToast()
 const tasaStore = useTasaStore()
+const aptosStore = useApartamentosStore()
 
+const mostrarModalCarteleraPDF = ref(false)
 const periodoExcel = ref(periodoActual())
 const exportando = ref(false)
 const enviando = ref(false)
@@ -465,5 +478,16 @@ async function exportarExcel() {
   } finally {
     exportando.value = false
   }
+}
+
+async function abrirCarteleraPDF() {
+  if (!aptosStore.matrizDeudas || aptosStore.matrizDeudas.length === 0) {
+    try {
+      await aptosStore.cargarMatrizDeudas()
+    } catch (e) {
+      console.error('Error cargando matriz deudas:', e)
+    }
+  }
+  mostrarModalCarteleraPDF.value = true
 }
 </script>
