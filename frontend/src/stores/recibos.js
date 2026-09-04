@@ -36,5 +36,10 @@ export const useRecibosStore = defineStore('recibos', () => {
     return data
   }
 
-  return { lista, cargando, error, cargar, cargarMisRecibos, emitirMasivo }
+  async function eliminar(id) {
+    await recibosService.eliminar(id)
+    lista.value = lista.value.filter(r => r.id !== id)
+  }
+
+  return { lista, cargando, error, cargar, cargarMisRecibos, emitirMasivo, eliminar }
 })

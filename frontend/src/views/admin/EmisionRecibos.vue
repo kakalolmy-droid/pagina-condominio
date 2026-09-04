@@ -84,6 +84,7 @@
               <th class="pb-3 font-semibold">Equivalente VES (BCV)</th>
               <th class="pb-3 font-semibold">Vencimiento</th>
               <th class="pb-3 font-semibold text-center">Estado</th>
+              <th class="pb-3 font-semibold text-center">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -105,9 +106,20 @@
               <td class="py-3 text-center">
                 <EstadoPagoBadge :estado="recibo.estado_pago" />
               </td>
+              <td class="py-3 text-center">
+                <button
+                  @click="confirmarEliminarRecibo(recibo)"
+                  class="p-2 rounded-neu-sm text-neu-danger hover:text-red-500 hover:shadow-neu-pressed transition-all duration-200 cursor-pointer"
+                  title="Eliminar este recibo"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </td>
             </tr>
             <tr v-if="recibosFiltrados.length === 0">
-              <td colspan="7" class="py-8 text-center text-neu-text-light">
+              <td colspan="8" class="py-8 text-center text-neu-text-light">
                 No hay recibos generados para este filtro.
               </td>
             </tr>
@@ -182,6 +194,25 @@ async function ejecutarEmision() {
     toast.error(error.response?.data?.detail || 'Error al emitir los recibos')
   } finally {
     emitiendo.value = false
+  }
+}
+
+async function confirmarEliminarRecibo(recibo) {
+  const aptoNum = obtenerNumeroApto(recibo.apartamento_id)
+  const periodoStr = formatPeriodo(recibo.mes_periodo)
+  if (!confirm(`¿Estás seguro de eliminar el recibo de ${periodoStr} para el Apto ${aptoNum}?\n\nEsta acción recalculará automáticamente la deuda pendiente y los meses adeudados del apartamento.`)) {
+    return
+  }
+
+  try {
+    await recibosStore.eliminar(recibo.id)
+    await Promise.all([
+      recibosStore.cargar(),
+      aptosStore.cargar()
+    ])
+    toast.success('Recibo eliminado y deuda sincronizada correctamente.')
+  } catch (error) {
+    toast.error(error.response?.data?.detail || 'Error al eliminar el recibo')
   }
 }
 </script>

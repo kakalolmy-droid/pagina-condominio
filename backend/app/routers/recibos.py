@@ -75,3 +75,39 @@ def emitir_masivo(
         "total_emitidos": len(recibos),
         "gasto_total_usd": float(request.gasto_total_usd),
     }
+
+
+@router.delete("/{recibo_id}", status_code=200)
+def eliminar_recibo(
+    recibo_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    """Elimina un recibo y sincroniza inmediatamente la deuda del apartamento."""
+    recibo = db.query(Recibo).filter(Recibo.id == recibo_id).first()
+    if not recibo:
+        raise HTTPException(status_code=404, detail="Recibo no encontrado")
+
+    from app.models.pago import Pago
+    apto_id = recibo.apartamento_id
+
+    # 1. Eliminar pagos asociados primero
+    pagos = db.query(Pago).filter(Pago.recibo_id == recibo_id).all()
+    for p in pagos:
+        db.delete(p)
+
+    # 2. Eliminar el recibo
+    db.delete(recibo)
+    db.commit()
+
+    # 3. Sincronizar meses_pendientes del apartamento
+    apto = db.query(Apartamento).filter(Apartamento.id == apto_id).first()
+    if apto:
+        pendientes = db.query(Recibo).filter(
+            Recibo.apartamento_id == apto_id,
+            Recibo.estado_pago != "pagado"
+        ).count()
+        apto.meses_pendientes = pendientes
+        db.commit()
+
+    return {"mensaje": "Recibo eliminado con éxito"}

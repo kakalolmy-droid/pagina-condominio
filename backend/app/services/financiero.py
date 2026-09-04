@@ -65,7 +65,7 @@ def emitir_recibos_mes(db: Session, request: EmisionMasivaRequest) -> list[Recib
 def obtener_matriz_deudas(db: Session) -> list[dict]:
     """
     Genera la matriz completa de deudas de todos los apartamentos.
-    Calcula la deuda multiplicando la cuota mensual por los meses pendientes.
+    Calcula la deuda sumando los recibos pendientes reales existentes en la base de datos.
     """
     try:
         tasa = obtener_tasa_actual(db)
@@ -78,11 +78,23 @@ def obtener_matriz_deudas(db: Session) -> list[dict]:
 
     for apto in apartamentos:
         cuota_mensual = float(apto.alicuota or 15.0)
-        meses_pend = int(apto.meses_pendientes if apto.meses_pendientes is not None else 1)
-        
-        deuda_usd = round(cuota_mensual * meses_pend, 2)
+
+        # Recibos no pagados reales en la base de datos
+        recibos_pend = db.query(Recibo).filter(
+            Recibo.apartamento_id == apto.id,
+            Recibo.estado_pago != "pagado"
+        ).order_by(Recibo.mes_periodo.asc()).all()
+
+        meses_pend = len(recibos_pend)
+        apto.meses_pendientes = meses_pend
+
+        deuda_usd = round(sum(float(r.monto_pendiente_usd or 0) for r in recibos_pend), 2)
         deuda_ves = round(deuda_usd * float(tasa_valor), 2) if tasa_valor else 0.0
-        estado = "solvente" if meses_pend == 0 else "moroso"
+        estado = "solvente" if meses_pend == 0 or deuda_usd == 0 else "moroso"
+
+        periodos_str = [r.mes_periodo for r in recibos_pend]
+        if not periodos_str and meses_pend > 0:
+            periodos_str = [f"{meses_pend} mes(es)"]
 
         matriz.append({
             "apartamento_id": apto.id,
@@ -98,10 +110,11 @@ def obtener_matriz_deudas(db: Session) -> list[dict]:
             "deuda_total_usd": deuda_usd,
             "deuda_total_ves": deuda_ves,
             "saldo_favor_usd": float(apto.saldo_favor_usd or 0),
-            "meses_adeudados": [f"{meses_pend} mes(es)"],
+            "meses_adeudados": periodos_str,
             "estado": estado,
         })
 
+    db.commit()
     return sorted(matriz, key=lambda x: x["estado"] != "moroso")
 
 
@@ -223,9 +236,7 @@ def sincronizar_recibos_todos_apartamentos(db: Session):
     """
     Sincroniza y garantiza coherencia total entre pagos, recibos y deudas:
     1. Si un recibo tiene pagos aprobados, garantiza su estado 'pagado' y monto_pendiente_usd = 0.
-    2. Recalcula meses_pendientes basándose exactamente en los recibos no pagados.
-    3. Si el administrador fijó manualmente una deuda mayor a los recibos existentes,
-       genera los recibos pendientes correspondientes hacia atrás.
+    2. Recalcula meses_pendientes basándose exactamente en los recibos no pagados reales en la base de datos.
     """
     apartamentos = db.query(Apartamento).all()
     for apto in apartamentos:
@@ -240,15 +251,9 @@ def sincronizar_recibos_todos_apartamentos(db: Session):
                 r.estado_pago = "pagado"
                 r.monto_pendiente_usd = Decimal("0.00")
 
-        # Paso 2: Contar los recibos no pagados
+        # Paso 2: Sincronizar meses_pendientes con los recibos pendientes reales
         no_pagados = [r for r in recibos_apto if r.estado_pago != "pagado"]
-        
-        # Si se configuraron manualmente más meses que los recibos existentes
-        if apto.meses_pendientes and apto.meses_pendientes > len(no_pagados):
-            sincronizar_recibos_segun_meses_pendientes(db, apto)
-        else:
-            # Sincronizar meses_pendientes con los recibos pendientes reales
-            apto.meses_pendientes = len([r for r in recibos_apto if r.estado_pago != "pagado"])
+        apto.meses_pendientes = len(no_pagados)
 
     db.commit()
 
