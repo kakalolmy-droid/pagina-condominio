@@ -469,10 +469,15 @@ async function solicitarPairingCode() {
 }
 
 async function desvincularNumero() {
-  if (confirm('¿Desea desvincular el número actual de WhatsApp para configurar uno nuevo?')) {
+  if (confirm('¿Desea desvincular la línea actual de WhatsApp para configurar un nuevo número?')) {
     try {
       await api.post('/whatsapp-bot/logout')
-      toast.info('Línea desvinculada. Listo para nuevo escaneo.')
+      try {
+        await api.post('/whatsapp-bot/save-phone', { phone: '' })
+      } catch (_) {}
+      telefonoPairing.value = ''
+      localStorage.removeItem('alcatraz_wpp_phone')
+      toast.info('Línea desvinculada. Ingresa el nuevo número de la administración.')
       await cargarEstadoBot()
     } catch (e) {
       toast.error('Error al desvincular el número')
