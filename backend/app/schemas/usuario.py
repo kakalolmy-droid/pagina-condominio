@@ -39,3 +39,35 @@ class UsuarioOut(UsuarioBase):
     fecha_registro: Optional[datetime] = None
     class Config:
         from_attributes = True
+
+class ApartamentoLecturaPerfil(BaseModel):
+    id: int
+    numero_apto: str
+    piso: Optional[str] = None
+    torre: Optional[str] = None
+    alicuota: Optional[float] = None
+    meses_pendientes: Optional[int] = 0
+    saldo_favor_usd: Optional[float] = 0.0
+    activo: Optional[bool] = True
+    class Config:
+        from_attributes = True
+
+class PerfilUpdate(BaseModel):
+    nombre: Optional[str] = None
+    apellido: Optional[str] = None
+    telefono_whatsapp: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+
+class PerfilOut(BaseModel):
+    id: int
+    nombre: str
+    apellido: str
+    cedula: str
+    telefono_whatsapp: str
+    email: EmailStr
+    rol: str
+    activo: bool
+    apartamentos: list[ApartamentoLecturaPerfil] = []
+    class Config:
+        from_attributes = True

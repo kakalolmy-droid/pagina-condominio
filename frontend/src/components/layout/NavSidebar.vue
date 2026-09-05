@@ -115,6 +115,7 @@ const menuItems = [
   { to: '/admin/deudas',        icon: '💵', label: 'Matriz de Deudas' },
   { to: '/admin/conciliacion',  icon: '⚖️', label: 'Conciliación' },
   { to: '/admin/reportes',      icon: '📱', label: 'Avisos WhatsApp' },
+  { to: '/admin/perfil',        icon: '👤', label: 'Mi Perfil' },
 ]
 </script>
 

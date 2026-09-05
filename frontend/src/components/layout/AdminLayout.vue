@@ -37,7 +37,11 @@
 
           <div class="flex items-center gap-2">
             <!-- Perfil de Usuario Neumórfico -->
-            <div class="bg-neu-bg shadow-neu-sm rounded-neu-sm px-3 py-1.5 sm:px-4 sm:py-2 border border-white/60 flex items-center gap-2 sm:gap-3 shrink-0">
+            <RouterLink
+              to="/admin/perfil"
+              class="bg-neu-bg shadow-neu-sm hover:shadow-neu-inset rounded-neu-sm px-3 py-1.5 sm:px-4 sm:py-2 border border-white/60 flex items-center gap-2 sm:gap-3 shrink-0 cursor-pointer transition-all"
+              title="Ver y editar mis datos"
+            >
               <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-neu-green text-white font-bold flex items-center justify-center text-xs shadow-sm">
                 {{ authStore.nombre?.charAt(0) || 'A' }}
               </div>
@@ -45,7 +49,7 @@
                 <span class="text-xs font-bold text-neu-text block leading-tight">{{ authStore.nombre }}</span>
                 <span class="text-[10px] font-semibold text-neu-green uppercase tracking-wider">{{ authStore.rol }}</span>
               </div>
-            </div>
+            </RouterLink>
 
             <!-- Botón Salir -->
             <button
@@ -69,7 +73,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, RouterLink } from 'vue-router'
 import NavSidebar from './NavSidebar.vue'
 import { useAuthStore, useTasaStore } from '@/stores'
 

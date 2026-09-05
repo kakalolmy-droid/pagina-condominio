@@ -53,6 +53,11 @@ const router = createRouter({
           name: 'admin-reportes',
           component: () => import('@/views/admin/Reportes.vue'),
         },
+        {
+          path: 'perfil',
+          name: 'admin-perfil',
+          component: () => import('@/views/propietario/MiPerfil.vue'),
+        },
       ],
     },
 
@@ -76,6 +81,11 @@ const router = createRouter({
           path: 'recibos',
           name: 'propietario-recibos',
           component: () => import('@/views/propietario/MisRecibos.vue'),
+        },
+        {
+          path: 'perfil',
+          name: 'propietario-perfil',
+          component: () => import('@/views/propietario/MiPerfil.vue'),
         },
       ],
     },

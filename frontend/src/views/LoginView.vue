@@ -57,6 +57,16 @@
               required
             />
 
+            <div class="flex justify-end -mt-1">
+              <button
+                type="button"
+                @click="abrirModalRecuperacion"
+                class="text-xs text-neu-green hover:underline font-semibold cursor-pointer"
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
+
             <!-- Error general -->
             <div v-if="errorGeneral" class="bg-red-50 border border-neu-danger text-neu-danger text-xs px-4 py-2.5 rounded-neu-sm">
               {{ errorGeneral }}
@@ -223,6 +233,109 @@
         © {{ new Date().getFullYear() }} Edificio Alcatraz — Sistema de Gestión de Condominio
       </p>
     </div>
+
+    <!-- Modal Neumórfico de Recuperación de Contraseña por WhatsApp -->
+    <NeuModal v-model="modalRecuperacionAbierto" title="Recuperación de Contraseña">
+      <!-- Paso 1: Solicitar Código OTP -->
+      <div v-if="pasoRecuperacion === 1" class="flex flex-col gap-4">
+        <div class="p-3 bg-neu-bg-dark rounded-neu-sm border border-neu-shadow-dark flex items-start gap-2.5 text-xs text-neu-text">
+          <span class="text-xl leading-none">📲</span>
+          <p class="text-neu-text-light leading-relaxed">
+            Ingresa tu <strong>correo electrónico, cédula o número de WhatsApp</strong> registrado. Te enviaremos un código de seguridad único de 6 dígitos directamente a tu WhatsApp.
+          </p>
+        </div>
+
+        <NeuInput
+          id="recup_identificador"
+          label="Correo, Cédula o Teléfono"
+          v-model="identificadorRecuperacion"
+          placeholder="ejemplo@correo.com, V-12345678 o 04141234567"
+          required
+        />
+
+        <div v-if="errorRecuperacion" class="bg-red-50 border border-neu-danger text-neu-danger text-xs px-4 py-2.5 rounded-neu-sm">
+          {{ errorRecuperacion }}
+        </div>
+
+        <div class="flex items-center justify-end gap-2 mt-2">
+          <NeuButton type="button" @click="modalRecuperacionAbierto = false">
+            Cancelar
+          </NeuButton>
+          <NeuButton
+            variant="primary"
+            type="button"
+            :loading="enviandoOtp"
+            @click="solicitarCodigoOtp"
+          >
+            Enviar Código por WhatsApp 📲
+          </NeuButton>
+        </div>
+      </div>
+
+      <!-- Paso 2: Introducir Código y Nueva Contraseña -->
+      <div v-else class="flex flex-col gap-4">
+        <div class="p-3 bg-emerald-50 rounded-neu-sm border border-emerald-300 text-xs text-emerald-900 leading-relaxed">
+          <span class="font-bold block text-sm mb-0.5">✅ ¡Código enviado por WhatsApp!</span>
+          Revisa tu WhatsApp vinculado (<strong>{{ telefonoMascarado }}</strong>). Hemos enviado un código numérico válido por 15 minutos.
+        </div>
+
+        <NeuInput
+          id="recup_codigo"
+          label="Código de Seguridad (6 dígitos)"
+          v-model="codigoOtp"
+          placeholder="Ej. 123456"
+          maxlength="6"
+          required
+        />
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <NeuInput
+            id="recup_nueva_pwd"
+            label="Nueva Contraseña"
+            v-model="nuevaPassword"
+            type="password"
+            placeholder="Mínimo 6 caracteres"
+            required
+          />
+          <NeuInput
+            id="recup_conf_pwd"
+            label="Confirmar Contraseña"
+            v-model="confirmarPassword"
+            type="password"
+            placeholder="Repite tu contraseña"
+            required
+          />
+        </div>
+
+        <div v-if="errorRecuperacion" class="bg-red-50 border border-neu-danger text-neu-danger text-xs px-4 py-2.5 rounded-neu-sm">
+          {{ errorRecuperacion }}
+        </div>
+
+        <div class="flex items-center justify-between gap-2 mt-2">
+          <button
+            type="button"
+            @click="pasoRecuperacion = 1; errorRecuperacion = ''"
+            class="text-xs text-neu-green hover:underline font-semibold cursor-pointer"
+          >
+            ← Volver a enviar
+          </button>
+
+          <div class="flex items-center gap-2">
+            <NeuButton type="button" @click="modalRecuperacionAbierto = false">
+              Cancelar
+            </NeuButton>
+            <NeuButton
+              variant="primary"
+              type="button"
+              :loading="cambiandoPassword"
+              @click="ejecutarCambioPassword"
+            >
+              Restablecer Contraseña 🔒
+            </NeuButton>
+          </div>
+        </div>
+      </div>
+    </NeuModal>
   </div>
 </template>
 
@@ -234,6 +347,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useTasaStore } from '@/stores/tasa'
 import NeuInput from '@/components/neumorph/NeuInput.vue'
 import NeuButton from '@/components/neumorph/NeuButton.vue'
+import NeuModal from '@/components/neumorph/NeuModal.vue'
 
 const router = useRouter()
 const toast = useToast()
@@ -337,6 +451,84 @@ async function handleRegistro() {
     errorGeneral.value = msg
   } finally {
     cargando.value = false
+  }
+}
+
+// ── Recuperación de Contraseña por WhatsApp ──
+const modalRecuperacionAbierto = ref(false)
+const pasoRecuperacion = ref(1)
+const identificadorRecuperacion = ref('')
+const telefonoMascarado = ref('')
+const codigoOtp = ref('')
+const nuevaPassword = ref('')
+const confirmarPassword = ref('')
+const enviandoOtp = ref(false)
+const cambiandoPassword = ref(false)
+const errorRecuperacion = ref('')
+
+function abrirModalRecuperacion() {
+  identificadorRecuperacion.value = email.value || ''
+  codigoOtp.value = ''
+  nuevaPassword.value = ''
+  confirmarPassword.value = ''
+  errorRecuperacion.value = ''
+  pasoRecuperacion.value = 1
+  modalRecuperacionAbierto.value = true
+}
+
+async function solicitarCodigoOtp() {
+  errorRecuperacion.value = ''
+  if (!identificadorRecuperacion.value.trim()) {
+    errorRecuperacion.value = 'Por favor ingresa tu correo electrónico, cédula o número de teléfono registrado.'
+    return
+  }
+  enviandoOtp.value = true
+  try {
+    const res = await authStore.solicitarRecuperacion(identificadorRecuperacion.value)
+    telefonoMascarado.value = res.telefono_mascarado || '***'
+    pasoRecuperacion.value = 2
+    toast.success('¡Código enviado a tu WhatsApp!')
+  } catch (err) {
+    const msg = err.response?.data?.detail || err.message || 'No se pudo enviar el código de recuperación.'
+    errorRecuperacion.value = msg
+  } finally {
+    enviandoOtp.value = false
+  }
+}
+
+async function ejecutarCambioPassword() {
+  errorRecuperacion.value = ''
+  if (!codigoOtp.value.trim()) {
+    errorRecuperacion.value = 'Por favor ingresa el código de 6 dígitos que recibiste por WhatsApp.'
+    return
+  }
+  if (!nuevaPassword.value || nuevaPassword.value.length < 6) {
+    errorRecuperacion.value = 'La nueva contraseña debe tener al menos 6 caracteres.'
+    return
+  }
+  if (nuevaPassword.value !== confirmarPassword.value) {
+    errorRecuperacion.value = 'Las contraseñas no coinciden. Por favor verifícalas.'
+    return
+  }
+
+  cambiandoPassword.value = true
+  try {
+    await authStore.restablecerPassword(
+      identificadorRecuperacion.value,
+      codigoOtp.value,
+      nuevaPassword.value
+    )
+    toast.success('¡Contraseña restablecida con éxito! Ya puedes iniciar sesión.')
+    modalRecuperacionAbierto.value = false
+    password.value = nuevaPassword.value
+    if (identificadorRecuperacion.value.includes('@')) {
+      email.value = identificadorRecuperacion.value
+    }
+  } catch (err) {
+    const msg = err.response?.data?.detail || err.message || 'Error al restablecer contraseña.'
+    errorRecuperacion.value = msg
+  } finally {
+    cambiandoPassword.value = false
   }
 }
 </script>

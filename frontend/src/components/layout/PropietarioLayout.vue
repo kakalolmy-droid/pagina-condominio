@@ -49,6 +49,14 @@
           >
             📄 Mis Recibos
           </RouterLink>
+
+          <RouterLink
+            to="/mi-cuenta/perfil"
+            class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-neu-sm text-xs font-bold text-neu-text transition-all"
+            active-class="shadow-neu-inset text-neu-green bg-neu-bg-dark border border-white/40"
+          >
+            👤 Mis Datos
+          </RouterLink>
         </div>
 
         <!-- Botón Salir Desktop -->

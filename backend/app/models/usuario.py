@@ -15,6 +15,8 @@ class Usuario(Base):
     password_hash = Column(String(255), nullable=False)
     rol = Column(String(20), default="propietario")  # admin | junta | propietario
     activo = Column(Boolean, default=True)  # Si está inactivo, no puede entrar ni recibe notificaciones
+    reset_token = Column(String(10), nullable=True)  # Código OTP temporal para recuperación
+    reset_token_exp = Column(DateTime, nullable=True)  # Expiración del código OTP (15 min)
     fecha_registro = Column(DateTime, server_default=func.now())
 
     # Relaciones

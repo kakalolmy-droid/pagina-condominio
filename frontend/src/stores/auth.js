@@ -72,6 +72,38 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function obtenerMiPerfil() {
+    const response = await api.get('/usuarios/me')
+    return response.data
+  }
+
+  async function actualizarMiPerfil(payload) {
+    const response = await api.put('/usuarios/me', payload)
+    const data = response.data
+    if (data.nombre) {
+      const nomCompleto = `${data.nombre} ${data.apellido || ''}`.trim()
+      nombre.value = nomCompleto
+      localStorage.setItem('nombre', nomCompleto)
+    }
+    return data
+  }
+
+  async function solicitarRecuperacion(identificador) {
+    const response = await api.post('/auth/forgot-password', {
+      identificador: identificador.trim(),
+    })
+    return response.data
+  }
+
+  async function restablecerPassword(identificador, codigo, nuevaPassword) {
+    const response = await api.post('/auth/reset-password', {
+      identificador: identificador.trim(),
+      codigo: codigo.trim(),
+      nueva_password: nuevaPassword.trim(),
+    })
+    return response.data
+  }
+
   return {
     token,
     rol,
@@ -84,5 +116,10 @@ export const useAuthStore = defineStore('auth', () => {
     registro,
     logout,
     inicializarToken,
+    obtenerMiPerfil,
+    actualizarMiPerfil,
+    solicitarRecuperacion,
+    restablecerPassword,
   }
 })
+

@@ -33,6 +33,8 @@ def auto_seed_database():
             "ALTER TABLE pagos ALTER COLUMN comprobante_url TYPE TEXT;",
             "CREATE TABLE IF NOT EXISTS whatsapp_session_files (filename VARCHAR(255) PRIMARY KEY, content TEXT NOT NULL, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
             "ALTER TABLE configuracion_condominio ADD COLUMN IF NOT EXISTS telefono_whatsapp_emisor VARCHAR(50) DEFAULT '';",
+            "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS reset_token VARCHAR(10);",
+            "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS reset_token_exp TIMESTAMP;",
         ]
         for sql in migraciones:
             try:
