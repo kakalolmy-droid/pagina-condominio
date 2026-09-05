@@ -20,8 +20,9 @@ RUN cd whatsapp_service && npm install --production
 # Copiar todo el código fuente
 COPY . .
 
-# Script de arranque simultáneo (Node WhatsApp + FastAPI)
+# Script de arranque simultáneo (Node WhatsApp + FastAPI) con restauración de sesión
 RUN echo '#!/bin/sh\n\
+python -c "from app.services.whatsapp_sync import restaurar_archivos_sesion; restaurar_archivos_sesion()" || true\n\
 cd /app/whatsapp_service && node server.js &\n\
 cd /app && uvicorn app.main:app --host 0.0.0.0 --port 8000\n\
 ' > /app/start.sh && chmod +x /app/start.sh

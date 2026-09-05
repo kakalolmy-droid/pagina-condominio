@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const QRCode = require('qrcode');
 const http = require('http');
+const path = require('path');
 const {
     default: makeWASocket,
     useMultiFileAuthState,
@@ -24,8 +25,83 @@ let sessionInfo = null;
 
 const logger = pino({ level: 'silent' });
 
+// Sincronización continua de archivos de sesión hacia PostgreSQL vía FastAPI
+let syncTimeout = null;
+function programarSyncSesion() {
+    if (syncTimeout) clearTimeout(syncTimeout);
+    syncTimeout = setTimeout(async () => {
+        try {
+            const authDir = 'auth_info_baileys';
+            if (!fs.existsSync(authDir)) return;
+            const filenames = fs.readdirSync(authDir);
+            const files = {};
+            for (const f of filenames) {
+                if (f.endsWith('.json')) {
+                    try {
+                        files[f] = fs.readFileSync(path.join(authDir, f), 'utf8');
+                    } catch (e) {}
+                }
+            }
+            if (Object.keys(files).length > 0) {
+                const req = http.request({
+                    hostname: '127.0.0.1',
+                    port: 8000,
+                    path: '/api/whatsapp-bot/internal/session-files',
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                req.on('error', () => {});
+                req.write(JSON.stringify({ files }));
+                req.end();
+                console.log(`💾 Sesión de WhatsApp respaldada en PostgreSQL (${Object.keys(files).length} archivos).`);
+            }
+        } catch (err) {
+            console.error('Error al sincronizar sesión con PostgreSQL:', err.message);
+        }
+    }, 2000);
+}
+
+// Restauración de sesión si el contenedor se reinició y la carpeta está vacía
+async function asegurarSesionDesdeDB() {
+    const authDir = 'auth_info_baileys';
+    if (!fs.existsSync(authDir) || fs.readdirSync(authDir).length === 0) {
+        for (let i = 0; i < 6; i++) {
+            try {
+                const data = await new Promise((resolve, reject) => {
+                    const req = http.request({
+                        hostname: '127.0.0.1',
+                        port: 8000,
+                        path: '/api/whatsapp-bot/internal/session-files',
+                        method: 'GET'
+                    }, (res) => {
+                        let body = '';
+                        res.on('data', chunk => body += chunk);
+                        res.on('end', () => {
+                            try { resolve(JSON.parse(body)); } catch (e) { reject(e); }
+                        });
+                    });
+                    req.on('error', reject);
+                    req.end();
+                });
+
+                if (data && data.files && Object.keys(data.files).length > 0) {
+                    fs.mkdirSync(authDir, { recursive: true });
+                    for (const [fname, fcontent] of Object.entries(data.files)) {
+                        fs.writeFileSync(path.join(authDir, fname), fcontent, 'utf8');
+                    }
+                    console.log(`✅ Restaurados ${Object.keys(data.files).length} archivos de sesión desde PostgreSQL.`);
+                    return true;
+                }
+            } catch (e) {}
+            await new Promise(r => setTimeout(r, 1000));
+        }
+    }
+    return false;
+}
+
 async function connectToWhatsApp() {
     try {
+        await asegurarSesionDesdeDB();
         const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
         const { version, isLatest } = await fetchLatestBaileysVersion();
         console.log(`Usando Baileys v${version.join('.')}, isLatest: ${isLatest}`);
@@ -42,14 +118,16 @@ async function connectToWhatsApp() {
             keepAliveIntervalMs: 10000,
         });
 
-        sock.ev.on('creds.update', saveCreds);
+        sock.ev.on('creds.update', async () => {
+            await saveCreds();
+            programarSyncSesion();
+        });
 
         sock.ev.on('connection.update', async (update) => {
             const { connection, lastDisconnect, qr } = update;
 
             if (qr) {
                 try {
-                    // Genera imagen QR nítida en base64 en tiempo real
                     qrCodeImage = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
                     isConnected = false;
                     console.log('📱 Nuevo código QR Baileys generado.');
@@ -70,6 +148,14 @@ async function connectToWhatsApp() {
                 if (statusCode === DisconnectReason.loggedOut) {
                     try {
                         fs.rmSync('auth_info_baileys', { recursive: true, force: true });
+                        const req = http.request({
+                            hostname: '127.0.0.1',
+                            port: 8000,
+                            path: '/api/whatsapp-bot/internal/session-files',
+                            method: 'DELETE'
+                        });
+                        req.on('error', () => {});
+                        req.end();
                     } catch (e) {}
                 }
 
@@ -84,6 +170,7 @@ async function connectToWhatsApp() {
                     id: sock.user?.id || 'Línea Conectada',
                     name: sock.user?.name || 'Administración Edificio Alcatraz'
                 };
+                programarSyncSesion();
             }
         });
     } catch (err) {
@@ -95,7 +182,7 @@ async function connectToWhatsApp() {
 // Iniciar conexión al levantar el servicio
 connectToWhatsApp();
 
-// ── Endpoints de WhatsApp (Soportando llamadas directas y con prefijo /api/whatsapp-bot) ──
+// ── Endpoints de WhatsApp ──
 
 // 1. Estado y QR
 app.get(['/status', '/api/whatsapp-bot/status'], (req, res) => {
@@ -154,6 +241,17 @@ app.post(['/logout', '/api/whatsapp-bot/logout'], async (req, res) => {
         try {
             fs.rmSync('auth_info_baileys', { recursive: true, force: true });
         } catch (e) {}
+        try {
+            const delReq = http.request({
+                hostname: '127.0.0.1',
+                port: 8000,
+                path: '/api/whatsapp-bot/internal/session-files',
+                method: 'DELETE'
+            });
+            delReq.on('error', () => {});
+            delReq.end();
+        } catch (e) {}
+
         setTimeout(connectToWhatsApp, 1000);
         res.json({ status: 'ok', message: 'Sesión de WhatsApp reseteada.' });
     } catch (e) {
@@ -212,7 +310,6 @@ function proxyToFastAPI(req, res) {
         proxyReq.write(bodyData);
         proxyReq.end();
     } else {
-        // Soporte completo para subida de comprobantes multipart/form-data
         req.pipe(proxyReq);
     }
 }

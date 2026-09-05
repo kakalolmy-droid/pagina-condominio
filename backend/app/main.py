@@ -12,6 +12,9 @@ from app.models.tasa_bcv import TasaBCV
 from datetime import date
 from decimal import Decimal
 from app.routers import auth, tasa, usuarios, apartamentos, recibos, pagos, conciliacion, reportes, whatsapp_bot, configuracion
+from app.models.whatsapp_session import WhatsAppSessionFile
+from app.models.configuracion import ConfiguracionCondominio
+from app.services.whatsapp_sync import restaurar_archivos_sesion
 from app.config import get_settings
 
 settings = get_settings()
@@ -28,6 +31,8 @@ def auto_seed_database():
             "ALTER TABLE apartamentos ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT true;",
             "ALTER TABLE apartamentos ADD COLUMN IF NOT EXISTS meses_pendientes INTEGER DEFAULT 1;",
             "ALTER TABLE pagos ALTER COLUMN comprobante_url TYPE TEXT;",
+            "CREATE TABLE IF NOT EXISTS whatsapp_session_files (filename VARCHAR(255) PRIMARY KEY, content TEXT NOT NULL, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
+            "ALTER TABLE configuracion_condominio ADD COLUMN IF NOT EXISTS telefono_whatsapp_emisor VARCHAR(50) DEFAULT '';",
         ]
         for sql in migraciones:
             try:
@@ -36,6 +41,12 @@ def auto_seed_database():
                     conn.commit()
             except Exception:
                 pass
+
+        # Restaurar archivos de sesión de WhatsApp desde PostgreSQL
+        try:
+            restaurar_archivos_sesion()
+        except Exception:
+            pass
 
         admin = db.query(Usuario).filter(Usuario.email == "admin@alcatraz.com").first()
         if not admin:

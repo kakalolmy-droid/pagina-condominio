@@ -11,4 +11,5 @@ class ConfiguracionCondominio(Base):
     cuenta_transferencia = Column(String(150), default="0102-0000-00-0000000000")
     zelle = Column(String(150), default="pagos@edificioalcatraz.com")
     nota_predeterminada = Column(Text, nullable=True, default="")
+    telefono_whatsapp_emisor = Column(String(50), nullable=True, default="")
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

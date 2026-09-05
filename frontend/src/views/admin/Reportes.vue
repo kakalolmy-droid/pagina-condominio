@@ -38,7 +38,7 @@
         <div class="text-xs text-neu-text">
           <p class="font-bold text-neu-green">✅ WhatsApp Autónomo Activo</p>
           <p class="text-neu-text-light mt-0.5">
-            Línea emisora: <span class="font-mono font-semibold text-neu-text">{{ botEstado.session?.id || 'Número Oficial Vinculado' }}</span>
+            Línea emisora oficial: <span class="font-mono font-semibold text-neu-text">{{ botEstado.saved_phone || telefonoPairing || botEstado.session?.id || 'Número Oficial Vinculado' }}</span>
           </p>
         </div>
         <span class="text-xs text-neu-text-light italic">Todos los avisos saldrán directamente desde este número de forma automática</span>
@@ -73,23 +73,35 @@
           <div class="mt-2 p-3 bg-neu-bg rounded-neu-sm border border-neu-shadow-dark">
             <p class="font-bold text-neu-green text-sm">🔢 Opción 2: Vincular con Número de Teléfono</p>
             <p class="text-neu-text-light mt-0.5 mb-2">
-              Si el QR tarda, ingresa tu número y genera tu código de 8 dígitos para WhatsApp:
+              Si el QR tarda, ingresa tu número y genera tu código de 8 dígitos para WhatsApp (este número queda guardado permanentemente en el sistema):
             </p>
-            <div class="flex gap-2 items-center">
+            <div class="flex gap-2 items-center flex-wrap sm:flex-nowrap">
               <input
                 v-model="telefonoPairing"
+                @input="guardarTelefonoLocal"
                 type="text"
                 placeholder="Ej. 04141234567 o 584141234567"
-                class="input-neu text-xs flex-1 py-1.5 px-3"
+                class="input-neu text-xs flex-1 py-1.5 px-3 min-w-[180px]"
               />
+              <button
+                @click="guardarTelefonoPermanente"
+                :disabled="guardandoTelefono"
+                class="px-2.5 py-1.5 rounded-neu-sm bg-neutral-700 hover:bg-neutral-600 text-white font-semibold text-xs shadow-neu-sm cursor-pointer whitespace-nowrap"
+                title="Guardar este número en el sistema para que nunca se borre"
+              >
+                💾 Guardar
+              </button>
               <button
                 @click="solicitarPairingCode"
                 :disabled="pidiendoCodigo"
-                class="px-3 py-1.5 rounded-neu-sm bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs shadow-neu-sm cursor-pointer"
+                class="px-3 py-1.5 rounded-neu-sm bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs shadow-neu-sm cursor-pointer whitespace-nowrap"
               >
                 {{ pidiendoCodigo ? 'Generando...' : 'Obtener Código' }}
               </button>
             </div>
+            <p v-if="telefonoPairing" class="text-[11px] text-neu-green font-medium mt-1.5">
+              🔒 Número guardado en el sistema: <strong>{{ telefonoPairing }}</strong>
+            </p>
             <div v-if="pairingCodeResultado" class="mt-3 p-2.5 bg-emerald-950/40 border border-emerald-500/50 rounded-neu-sm text-center">
               <span class="text-xs text-emerald-300">Tu código de vinculación para WhatsApp es:</span>
               <p class="text-xl font-extrabold tracking-widest text-white mt-1 select-all">
@@ -307,9 +319,37 @@ const resultadoEnvio = ref(null)
 const botEstado = ref({ connected: false, session: null, qr: null })
 let pollingTimer = null
 
-const telefonoPairing = ref('')
+const telefonoPairing = ref(localStorage.getItem('alcatraz_wpp_phone') || '')
+const guardandoTelefono = ref(false)
 const pidiendoCodigo = ref(false)
 const pairingCodeResultado = ref('')
+
+function guardarTelefonoLocal() {
+  if (telefonoPairing.value) {
+    localStorage.setItem('alcatraz_wpp_phone', telefonoPairing.value.trim())
+  }
+}
+
+async function guardarTelefonoPermanente(mostrarToast = true) {
+  if (!telefonoPairing.value) {
+    if (mostrarToast) toast.error('Ingresa un número de teléfono')
+    return
+  }
+  guardandoTelefono.value = true
+  localStorage.setItem('alcatraz_wpp_phone', telefonoPairing.value.trim())
+  try {
+    await api.post('/whatsapp-bot/save-phone', { phone: telefonoPairing.value.trim() })
+    if (mostrarToast) {
+      toast.success('¡Número de WhatsApp guardado permanentemente en el sistema!')
+    }
+  } catch (e) {
+    if (mostrarToast) {
+      toast.error('Error al guardar el teléfono en el servidor')
+    }
+  } finally {
+    guardandoTelefono.value = false
+  }
+}
 
 const formAvisos = ref({
   periodo: periodoActual(),
@@ -381,6 +421,10 @@ async function cargarEstadoBot() {
   try {
     const { data } = await api.get('/whatsapp-bot/status')
     botEstado.value = data
+    if (data.saved_phone) {
+      telefonoPairing.value = data.saved_phone
+      localStorage.setItem('alcatraz_wpp_phone', data.saved_phone)
+    }
   } catch (e) {
     console.error('Error al cargar estado del bot:', e)
   }
@@ -405,11 +449,12 @@ async function solicitarPairingCode() {
   }
   pidiendoCodigo.value = true
   pairingCodeResultado.value = ''
+  localStorage.setItem('alcatraz_wpp_phone', telefonoPairing.value.trim())
   try {
-    const { data } = await api.post('/whatsapp-bot/request-pairing-code', { phone: telefonoPairing.value })
+    const { data } = await api.post('/whatsapp-bot/request-pairing-code', { phone: telefonoPairing.value.trim() })
     if (data.code) {
       pairingCodeResultado.value = data.code
-      toast.success('¡Código de vinculación generado!')
+      toast.success('¡Código de vinculación generado y número guardado!')
     }
   } catch (e) {
     toast.error(e.response?.data?.detail || 'Error al generar código de vinculación')
