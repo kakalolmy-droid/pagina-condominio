@@ -67,28 +67,28 @@
                         <td class="p-1 text-right">100,00%</td>
                       </tr>
                       <tr class="border-b border-neutral-300">
-                        <td class="p-1 border-r border-neutral-300 text-emerald-800 font-semibold">
+                        <td class="p-1 border-r border-neutral-300 stats-al-dia font-semibold text-emerald-800">
                           {{ aptosAlDia.length }} APTOS AL DÍA
                         </td>
-                        <td class="p-1 text-right font-semibold text-emerald-800">{{ pctAlDia }}%</td>
+                        <td class="p-1 text-right font-semibold stats-al-dia text-emerald-800">{{ pctAlDia }}%</td>
                       </tr>
                       <tr class="border-b border-neutral-300">
-                        <td class="p-1 border-r border-neutral-300 text-neutral-800">
+                        <td class="p-1 border-r border-neutral-300 stats-1a3 text-neutral-800">
                           {{ aptos1a3.length }} APTOS DE 1 A 3 RECIBOS
                         </td>
-                        <td class="p-1 text-right font-medium text-neutral-800">{{ pct1a3 }}%</td>
+                        <td class="p-1 text-right font-medium stats-1a3 text-neutral-800">{{ pct1a3 }}%</td>
                       </tr>
                       <tr class="border-b border-neutral-300">
-                        <td class="p-1 border-r border-neutral-300 text-amber-800">
+                        <td class="p-1 border-r border-neutral-300 stats-4a11 text-amber-800">
                           {{ aptos4a11.length }} APTOS DE 4 A 11 RECIBOS
                         </td>
-                        <td class="p-1 text-right font-medium text-amber-800">{{ pct4a11 }}%</td>
+                        <td class="p-1 text-right font-medium stats-4a11 text-amber-800">{{ pct4a11 }}%</td>
                       </tr>
                       <tr>
-                        <td class="p-1 border-r border-neutral-300 text-rose-800 font-bold">
+                        <td class="p-1 border-r border-neutral-300 stats-critico text-rose-800 font-bold">
                           {{ aptosCriticos.length }} APTOS EN CRÍTICO (12+)
                         </td>
-                        <td class="p-1 text-right font-bold text-rose-800">{{ pctCriticos }}%</td>
+                        <td class="p-1 text-right font-bold stats-critico text-rose-800">{{ pctCriticos }}%</td>
                       </tr>
                     </tbody>
                   </table>
@@ -116,7 +116,8 @@
                   <tr
                     v-for="item in matrizOrdenada"
                     :key="item.apartamento_id"
-                    class="border-b border-neutral-200 even:bg-neutral-50"
+                    class="border-b border-neutral-200"
+                    :class="(item.meses_pendientes > 0 || item.estado === 'moroso') ? 'fila-moroso bg-rose-50/40' : 'fila-solvente bg-white'"
                   >
                     <td class="border border-neutral-300 p-1.5 font-bold text-center text-neutral-900">
                       {{ item.numero_apto }}
@@ -125,27 +126,30 @@
                       {{ item.meses_pendientes > 0 ? item.meses_pendientes : '0' }}
                     </td>
                     <td class="border border-neutral-300 p-1.5 text-center text-neutral-700">
-                      <span v-if="item.meses_pendientes > 0">
+                      <span v-if="item.meses_pendientes > 0" class="texto-meses-moroso">
                         {{ Array.isArray(item.meses_adeudados) ? item.meses_adeudados.join(', ') : `${item.meses_pendientes} mes(es)` }}
                       </span>
-                      <span v-else class="text-emerald-700 font-medium">Al día</span>
+                      <span v-else class="texto-al-dia font-semibold text-emerald-700">Al día</span>
                     </td>
-                    <td class="border border-neutral-300 p-1.5 text-right font-bold" :class="item.deuda_total_usd > 0 ? 'text-rose-700' : 'text-emerald-700'">
+                    <td
+                      class="border border-neutral-300 p-1.5 text-right font-bold"
+                      :class="(item.meses_pendientes > 0 || item.deuda_total_usd > 0) ? 'monto-moroso text-rose-700' : 'monto-solvente text-emerald-700'"
+                    >
                       {{ formatUSD(item.deuda_total_usd) }}
                     </td>
                     <td class="border border-neutral-300 p-1.5 text-right font-medium text-neutral-800">
                       {{ formatVES(item.deuda_total_ves) }}
                     </td>
-                    <td class="border border-neutral-300 p-1.5 text-center font-bold text-[10px]">
+                    <td class="border border-neutral-300 p-1.5 text-center">
                       <span
                         v-if="item.meses_pendientes === 0 || item.estado === 'solvente'"
-                        class="text-emerald-700"
+                        class="badge-solvente"
                       >
                         ● SOLVENTE
                       </span>
                       <span
                         v-else
-                        class="text-rose-700"
+                        class="badge-moroso"
                       >
                         ▲ MOROSO
                       </span>
@@ -157,7 +161,7 @@
                     <td class="border border-neutral-300 p-2 text-center" colspan="1">TOTALES</td>
                     <td class="border border-neutral-300 p-2 text-center">{{ totalRecibosImpagos }}</td>
                     <td class="border border-neutral-300 p-2 text-center text-neutral-500">—</td>
-                    <td class="border border-neutral-300 p-2 text-right text-rose-700 font-black">
+                    <td class="border border-neutral-300 p-2 text-right monto-total-moroso text-rose-700 font-black">
                       {{ formatUSD(totalDeudaUSD) }}
                     </td>
                     <td class="border border-neutral-300 p-2 text-right font-black">
@@ -361,6 +365,96 @@ function imprimirPDF() {
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
+        .fila-moroso {
+          background-color: #fff1f2 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .fila-solvente {
+          background-color: #ffffff !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .badge-moroso {
+          display: inline-block !important;
+          padding: 2.5px 8px !important;
+          border-radius: 4px !important;
+          background-color: #fee2e2 !important;
+          color: #dc2626 !important;
+          border: 1px solid #f87171 !important;
+          font-weight: 800 !important;
+          font-size: 10px !important;
+          letter-spacing: 0.5px !important;
+          white-space: nowrap !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .badge-solvente {
+          display: inline-block !important;
+          padding: 2.5px 8px !important;
+          border-radius: 4px !important;
+          background-color: #dcfce7 !important;
+          color: #15803d !important;
+          border: 1px solid #86efac !important;
+          font-weight: 800 !important;
+          font-size: 10px !important;
+          letter-spacing: 0.5px !important;
+          white-space: nowrap !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .monto-moroso {
+          color: #dc2626 !important;
+          font-weight: 800 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .monto-solvente {
+          color: #15803d !important;
+          font-weight: 700 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .texto-al-dia {
+          color: #15803d !important;
+          font-weight: 600 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .texto-meses-moroso {
+          color: #374151 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .monto-total-moroso {
+          color: #dc2626 !important;
+          font-weight: 900 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .stats-al-dia {
+          color: #15803d !important;
+          font-weight: 700 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .stats-1a3 {
+          color: #374151 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .stats-4a11 {
+          color: #b45309 !important;
+          font-weight: 600 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .stats-critico {
+          color: #dc2626 !important;
+          font-weight: 800 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
         .footer-totals {
           background-color: #f3f4f6 !important;
           -webkit-print-color-adjust: exact;
@@ -410,5 +504,74 @@ function imprimirPDF() {
 }
 .modal-enter-from, .modal-leave-to {
   opacity: 0;
+}
+
+.badge-moroso {
+  display: inline-block;
+  padding: 2.5px 8px;
+  border-radius: 4px;
+  background-color: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #f87171;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.badge-solvente {
+  display: inline-block;
+  padding: 2.5px 8px;
+  border-radius: 4px;
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.monto-moroso {
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.monto-solvente {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.texto-al-dia {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.texto-meses-moroso {
+  color: #374151;
+}
+
+.monto-total-moroso {
+  color: #dc2626;
+  font-weight: 900;
+}
+
+.stats-al-dia {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.stats-1a3 {
+  color: #374151;
+}
+
+.stats-4a11 {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.stats-critico {
+  color: #dc2626;
+  font-weight: 800;
 }
 </style>
