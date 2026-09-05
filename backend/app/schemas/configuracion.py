@@ -9,6 +9,7 @@ class DatosBancariosBase(BaseModel):
     cuenta_transferencia: Optional[str] = "0102-0000-00-0000000000"
     zelle: Optional[str] = "pagos@edificioalcatraz.com"
     nota_predeterminada: Optional[str] = ""
+    telefono_whatsapp_emisor: Optional[str] = ""
 
 
 class DatosBancariosUpdate(DatosBancariosBase):

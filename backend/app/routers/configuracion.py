@@ -61,6 +61,8 @@ def guardar_datos_bancarios(
         config.zelle = payload.zelle
     if payload.nota_predeterminada is not None:
         config.nota_predeterminada = payload.nota_predeterminada
+    if payload.telefono_whatsapp_emisor is not None:
+        config.telefono_whatsapp_emisor = payload.telefono_whatsapp_emisor
 
     db.commit()
     db.refresh(config)

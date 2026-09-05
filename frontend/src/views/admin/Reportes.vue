@@ -385,6 +385,10 @@ async function cargarDatosBancarios() {
       if (data.cuenta_transferencia) formAvisos.value.transferencia = data.cuenta_transferencia
       if (data.zelle) formAvisos.value.zelle = data.zelle
       if (data.nota_predeterminada) formAvisos.value.nota_adicional = data.nota_predeterminada
+      if (data.telefono_whatsapp_emisor) {
+        telefonoPairing.value = data.telefono_whatsapp_emisor
+        localStorage.setItem('alcatraz_wpp_phone', data.telefono_whatsapp_emisor)
+      }
     }
   } catch (e) {
     console.error('Error al cargar datos bancarios predeterminados:', e)
@@ -400,6 +404,7 @@ async function guardarPredeterminados(mostrarToast = true) {
       cuenta_transferencia: formAvisos.value.transferencia,
       zelle: formAvisos.value.zelle,
       nota_predeterminada: formAvisos.value.nota_adicional,
+      telefono_whatsapp_emisor: telefonoPairing.value.trim(),
     })
     if (mostrarToast) {
       toast.success('¡Datos bancarios guardados como predeterminados y sincronizados con los propietarios!')
