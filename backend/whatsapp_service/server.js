@@ -182,10 +182,10 @@ async function connectToWhatsApp() {
 // Iniciar conexión al levantar el servicio
 connectToWhatsApp();
 
-// ── Endpoints de WhatsApp ──
+// ── Endpoints internos de WhatsApp (Invocados por FastAPI o directamente) ──
 
 // 1. Estado y QR
-app.get(['/status', '/api/whatsapp-bot/status'], (req, res) => {
+app.get('/status', (req, res) => {
     res.json({
         connected: isConnected,
         qr: qrCodeImage,
@@ -194,7 +194,7 @@ app.get(['/status', '/api/whatsapp-bot/status'], (req, res) => {
 });
 
 // 2. Refrescar QR
-app.post(['/refresh-qr', '/api/whatsapp-bot/refresh-qr'], async (req, res) => {
+app.post('/refresh-qr', async (req, res) => {
     try {
         if (sock) {
             try { sock.end(); } catch (e) {}
@@ -208,7 +208,7 @@ app.post(['/refresh-qr', '/api/whatsapp-bot/refresh-qr'], async (req, res) => {
 });
 
 // 3. Vincular por Código de 8 Dígitos (Pairing Code)
-app.post(['/request-pairing-code', '/api/whatsapp-bot/request-pairing-code'], async (req, res) => {
+app.post('/request-pairing-code', async (req, res) => {
     const { phone } = req.body;
     if (!phone) {
         return res.status(400).json({ error: 'Número de teléfono requerido' });
@@ -230,7 +230,7 @@ app.post(['/request-pairing-code', '/api/whatsapp-bot/request-pairing-code'], as
 });
 
 // 4. Desconectar / Cerrar sesión
-app.post(['/logout', '/api/whatsapp-bot/logout'], async (req, res) => {
+app.post('/logout', async (req, res) => {
     try {
         if (sock) {
             try { await sock.logout(); } catch (e) {}
@@ -260,7 +260,7 @@ app.post(['/logout', '/api/whatsapp-bot/logout'], async (req, res) => {
 });
 
 // 5. Envío de mensaje individual
-app.post(['/send-message', '/api/whatsapp-bot/send-message'], async (req, res) => {
+app.post('/send-message', async (req, res) => {
     const { phone, message } = req.body;
     if (!isConnected || !sock) {
         return res.status(400).json({ error: 'WhatsApp no está vinculado. Escanea el código QR primero.' });
