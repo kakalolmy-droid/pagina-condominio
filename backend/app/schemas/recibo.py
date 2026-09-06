@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from app.schemas.apartamento import ApartamentoOut
 
@@ -19,6 +19,11 @@ class ReciboOut(ReciboBase):
     monto_pendiente_usd: Decimal
     estado_pago: str
     ultimo_pago_estado: Optional[str] = None
+    comprobante_url: Optional[str] = None
+    ultimo_pago_referencia: Optional[str] = None
+    ultimo_pago_metodo: Optional[str] = None
+    ultimo_pago_monto: Optional[Decimal] = None
+    ultimo_pago_fecha: Optional[datetime] = None
     class Config:
         from_attributes = True
 

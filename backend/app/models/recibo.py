@@ -20,8 +20,38 @@ class Recibo(Base):
     pagos = relationship("Pago", back_populates="recibo")
 
     @property
-    def ultimo_pago_estado(self):
+    def ultimo_pago(self):
         if self.pagos:
-            return self.pagos[-1].estado_conciliacion
+            return self.pagos[-1]
         return None
+
+    @property
+    def ultimo_pago_estado(self):
+        p = self.ultimo_pago
+        return p.estado_conciliacion if p else None
+
+    @property
+    def comprobante_url(self):
+        p = self.ultimo_pago
+        return p.comprobante_url if p else None
+
+    @property
+    def ultimo_pago_referencia(self):
+        p = self.ultimo_pago
+        return p.referencia_bancaria if p else None
+
+    @property
+    def ultimo_pago_metodo(self):
+        p = self.ultimo_pago
+        return p.metodo_pago if p else None
+
+    @property
+    def ultimo_pago_monto(self):
+        p = self.ultimo_pago
+        return p.monto_declarado if p else None
+
+    @property
+    def ultimo_pago_fecha(self):
+        p = self.ultimo_pago
+        return p.fecha_reporte if p else None
 
