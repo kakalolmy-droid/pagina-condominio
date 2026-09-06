@@ -38,7 +38,7 @@
         <div class="text-xs text-neu-text">
           <p class="font-bold text-neu-green">✅ WhatsApp Autónomo Activo</p>
           <p class="text-neu-text-light mt-0.5">
-            Línea emisora oficial: <span class="font-mono font-semibold text-neu-text">{{ botEstado.saved_phone || telefonoPairing || botEstado.session?.id || 'Número Oficial Vinculado' }}</span>
+            Línea emisora oficial: <span class="font-mono font-semibold text-neu-text">{{ lineaEmisoraMostrada }}</span>
           </p>
         </div>
         <span class="text-xs text-neu-text-light italic">Todos los avisos saldrán directamente desde este número de forma automática</span>
@@ -297,7 +297,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { AdminLayout } from '@/components/layout'
 import { NeuCard, NeuButton, NeuInput } from '@/components/neumorph'
@@ -319,10 +319,42 @@ const resultadoEnvio = ref(null)
 const botEstado = ref({ connected: false, session: null, qr: null })
 let pollingTimer = null
 
-const telefonoPairing = ref(localStorage.getItem('alcatraz_wpp_phone') || '')
+const rawStoredPhone = localStorage.getItem('alcatraz_wpp_phone') || ''
+const telefonoPairing = ref(rawStoredPhone === '04149998877' ? '' : rawStoredPhone)
+if (rawStoredPhone === '04149998877') {
+  localStorage.removeItem('alcatraz_wpp_phone')
+}
 const guardandoTelefono = ref(false)
 const pidiendoCodigo = ref(false)
 const pairingCodeResultado = ref('')
+
+const lineaEmisoraMostrada = computed(() => {
+  let num = botEstado.value?.saved_phone || botEstado.value?.phone || botEstado.value?.session?.phone
+  if (!num && botEstado.value?.session?.id) {
+    const rawId = String(botEstado.value.session.id)
+    if (rawId.includes('@')) {
+      num = rawId.split(':')[0].split('@')[0]
+    }
+  }
+
+  if (num === '04149998877') {
+    num = ''
+  }
+
+  if (!num && telefonoPairing.value && telefonoPairing.value !== '04149998877') {
+    num = telefonoPairing.value
+  }
+
+  if (!num) {
+    return 'Línea Oficial Conectada y Lista'
+  }
+
+  const clean = String(num).replace(/\D/g, '')
+  if (clean.startsWith('58') && clean.length === 12) {
+    return `0${clean.slice(2, 5)}-${clean.slice(5)}`
+  }
+  return num
+})
 
 function guardarTelefonoLocal() {
   if (telefonoPairing.value) {
@@ -385,9 +417,12 @@ async function cargarDatosBancarios() {
       if (data.cuenta_transferencia) formAvisos.value.transferencia = data.cuenta_transferencia
       if (data.zelle) formAvisos.value.zelle = data.zelle
       if (data.nota_predeterminada) formAvisos.value.nota_adicional = data.nota_predeterminada
-      if (data.telefono_whatsapp_emisor) {
+      if (data.telefono_whatsapp_emisor && data.telefono_whatsapp_emisor !== '04149998877') {
         telefonoPairing.value = data.telefono_whatsapp_emisor
         localStorage.setItem('alcatraz_wpp_phone', data.telefono_whatsapp_emisor)
+      } else if (data.telefono_whatsapp_emisor === '04149998877') {
+        telefonoPairing.value = ''
+        localStorage.removeItem('alcatraz_wpp_phone')
       }
     }
   } catch (e) {
@@ -426,9 +461,15 @@ async function cargarEstadoBot() {
   try {
     const { data } = await api.get('/whatsapp-bot/status')
     botEstado.value = data
-    if (data.saved_phone) {
+    if (data.saved_phone && data.saved_phone !== '04149998877') {
       telefonoPairing.value = data.saved_phone
       localStorage.setItem('alcatraz_wpp_phone', data.saved_phone)
+    } else if (data.phone && data.phone !== '04149998877') {
+      telefonoPairing.value = data.phone
+      localStorage.setItem('alcatraz_wpp_phone', data.phone)
+    } else if (data.saved_phone === '04149998877') {
+      telefonoPairing.value = ''
+      localStorage.removeItem('alcatraz_wpp_phone')
     }
   } catch (e) {
     console.error('Error al cargar estado del bot:', e)

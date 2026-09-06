@@ -166,10 +166,39 @@ async function connectToWhatsApp() {
                 console.log('✅ WhatsApp Conectado exitosamente como línea del condominio.');
                 isConnected = true;
                 qrCodeImage = null;
+
+                let realPhone = '';
+                if (sock && sock.user && sock.user.id) {
+                    realPhone = sock.user.id.split(':')[0].split('@')[0];
+                }
+
                 sessionInfo = {
                     id: sock.user?.id || 'Línea Conectada',
-                    name: sock.user?.name || 'Administración Edificio Alcatraz'
+                    name: sock.user?.name || 'Administración Edificio Alcatraz',
+                    phone: realPhone
                 };
+
+                console.log(`📞 Teléfono de WhatsApp conectado: ${realPhone}`);
+
+                if (realPhone && realPhone !== '04149998877') {
+                    try {
+                        const postData = JSON.stringify({ phone: realPhone });
+                        const reqSave = http.request({
+                            hostname: '127.0.0.1',
+                            port: 8000,
+                            path: '/api/whatsapp-bot/internal/auto-save-connected-phone',
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Content-Length': Buffer.byteLength(postData)
+                            }
+                        });
+                        reqSave.on('error', () => {});
+                        reqSave.write(postData);
+                        reqSave.end();
+                    } catch (e) {}
+                }
+
                 programarSyncSesion();
             }
         });
@@ -186,10 +215,15 @@ connectToWhatsApp();
 
 // 1. Estado y QR
 app.get('/status', (req, res) => {
+    let realPhone = '';
+    if (sock && sock.user && sock.user.id) {
+        realPhone = sock.user.id.split(':')[0].split('@')[0];
+    }
     res.json({
         connected: isConnected,
         qr: qrCodeImage,
-        session: sessionInfo
+        session: sessionInfo,
+        phone: realPhone
     });
 });
 
