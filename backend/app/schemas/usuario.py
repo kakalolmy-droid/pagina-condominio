@@ -28,6 +28,8 @@ class UsuarioSimple(BaseModel):
     id: int
     nombre: str
     apellido: str
+    cedula: Optional[str] = None
+    telefono_whatsapp: Optional[str] = None
     email: str
     rol: str
     activo: bool = True

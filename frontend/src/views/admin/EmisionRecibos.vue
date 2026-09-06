@@ -179,10 +179,13 @@
                       <span class="font-bold text-neu-text block leading-snug text-xs sm:text-sm truncate">
                         {{ apto.habitanteNombre }}
                       </span>
-                      <span v-if="apto.habitanteTelefono" class="text-[11px] text-neu-text-light block font-mono">
+                      <span v-if="apto.habitanteTelefono" class="text-[11px] text-neu-text font-bold block font-mono mt-0.5">
                         📱 {{ apto.habitanteTelefono }}
                       </span>
-                      <span v-else-if="!apto.propietario" class="text-[11px] text-amber-700 italic block">
+                      <span v-else-if="apto.propietario || apto.propietario_id" class="text-[10px] text-neu-text-light italic block mt-0.5">
+                        Sin teléfono registrado
+                      </span>
+                      <span v-else class="text-[11px] text-amber-700 italic block mt-0.5">
                         Sin residente registrado
                       </span>
                     </div>
@@ -324,6 +327,9 @@
                   <span class="font-bold text-neu-text text-xs sm:text-sm block truncate max-w-[180px]">
                     {{ obtenerNombreHabitantePorAptoId(recibo.apartamento_id) }}
                   </span>
+                  <span v-if="obtenerTelefonoHabitantePorAptoId(recibo.apartamento_id)" class="text-[11px] text-neu-text font-mono font-bold block mt-0.5">
+                    📱 {{ obtenerTelefonoHabitantePorAptoId(recibo.apartamento_id) }}
+                  </span>
                 </td>
                 <td class="py-3.5 px-3.5 align-middle text-center font-bold text-neu-text text-xs sm:text-sm whitespace-nowrap">
                   {{ formatUSD(recibo.monto_total_usd) }}
@@ -397,9 +403,20 @@
             <div>
               <span class="text-xs text-neu-text-light uppercase tracking-wider font-bold block">Residente / Propietario</span>
               <h4 class="text-sm sm:text-base font-extrabold text-neu-text">{{ aptoSeleccionado.habitanteNombre }}</h4>
-              <p class="text-[11px] text-neu-text-light font-mono">
-                {{ aptoSeleccionado.habitanteTelefono || 'Sin teléfono' }} • {{ aptoSeleccionado.habitanteEmail || 'Sin email' }}
-              </p>
+              <div class="flex items-center gap-2 flex-wrap text-xs mt-1">
+                <span v-if="aptoSeleccionado.habitanteTelefono" class="font-bold text-neu-text font-mono inline-flex items-center gap-1 bg-neu-bg px-2.5 py-1 rounded shadow-neu-sm border border-white/60">
+                  📱 {{ aptoSeleccionado.habitanteTelefono }}
+                </span>
+                <span v-else class="text-amber-700 italic text-xs">
+                  Sin teléfono registrado
+                </span>
+                <span v-if="aptoSeleccionado.habitanteCedula" class="text-neu-text-light font-mono text-xs">
+                  • C.I: <strong>{{ aptoSeleccionado.habitanteCedula }}</strong>
+                </span>
+                <span v-if="aptoSeleccionado.habitanteEmail" class="text-neu-text-light text-xs">
+                  • ✉️ {{ aptoSeleccionado.habitanteEmail }}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -592,13 +609,14 @@ import { useToast } from 'vue-toastification'
 import { AdminLayout } from '@/components/layout'
 import { NeuCard, NeuButton, NeuInput, NeuModal } from '@/components/neumorph'
 import { EstadoPagoBadge } from '@/components/shared'
-import { useRecibosStore, useApartamentosStore, useTasaStore } from '@/stores'
+import { useRecibosStore, useApartamentosStore, useTasaStore, useUsuariosStore } from '@/stores'
 import { formatUSD, formatVES, formatFecha, formatPeriodo, periodoActual } from '@/utils'
 
 const toast = useToast()
 const recibosStore = useRecibosStore()
 const aptosStore = useApartamentosStore()
 const tasaStore = useTasaStore()
+const usuariosStore = useUsuariosStore()
 
 const emitiendo = ref(false)
 const modoVista = ref('apartamentos') // 'apartamentos' | 'recibos'
@@ -623,6 +641,7 @@ onMounted(async () => {
     recibosStore.cargar(),
     aptosStore.cargar(),
     tasaStore.cargarTasa(),
+    usuariosStore.cargar(),
   ])
 })
 
@@ -654,6 +673,7 @@ function getAptoSubVal(item) {
 const apartamentosConRecibos = computed(() => {
   const aptos = aptosStore.lista || []
   const recibos = recibosStore.lista || []
+  const usuarios = usuariosStore.lista || []
 
   const mapeados = aptos.map((apto) => {
     const recibosApto = recibos
@@ -670,17 +690,21 @@ const apartamentosConRecibos = computed(() => {
       ? totalDeudaUSD * parseFloat(tasaStore.tasaActual)
       : 0
 
-    const habitanteNombre = apto.propietario
-      ? `${apto.propietario.nombre} ${apto.propietario.apellido}`.trim()
+    // Buscar habitante en la relación directa o en la lista general de usuarios
+    const habitante = apto.propietario || usuarios.find((u) => u.id === apto.propietario_id)
+    const habitanteNombre = habitante
+      ? `${habitante.nombre} ${habitante.apellido}`.trim()
       : 'Sin habitante asignado'
-    const habitanteEmail = apto.propietario?.email || ''
-    const habitanteTelefono = apto.propietario?.telefono_whatsapp || ''
+    const habitanteEmail = habitante?.email || ''
+    const habitanteTelefono = habitante?.telefono_whatsapp || apto.propietario?.telefono_whatsapp || ''
+    const habitanteCedula = habitante?.cedula || apto.propietario?.cedula || ''
 
     return {
       ...apto,
       habitanteNombre,
       habitanteEmail,
       habitanteTelefono,
+      habitanteCedula,
       recibos: recibosApto,
       totalEmitidos,
       totalPendientes: recibosPendientes.length,
@@ -719,7 +743,8 @@ const apartamentosFiltrados = computed(() => {
       (a) =>
         a.numero_apto.toLowerCase().includes(term) ||
         a.habitanteNombre.toLowerCase().includes(term) ||
-        (a.habitanteEmail && a.habitanteEmail.toLowerCase().includes(term))
+        (a.habitanteEmail && a.habitanteEmail.toLowerCase().includes(term)) ||
+        (a.habitanteTelefono && a.habitanteTelefono.toLowerCase().includes(term))
     )
   }
   return lista
@@ -735,8 +760,9 @@ const recibosFiltradosGeneral = computed(() => {
     lista = lista.filter((r) => {
       const aptoNum = obtenerNumeroApto(r.apartamento_id).toLowerCase()
       const nom = obtenerNombreHabitantePorAptoId(r.apartamento_id).toLowerCase()
+      const tel = obtenerTelefonoHabitantePorAptoId(r.apartamento_id).toLowerCase()
       const per = r.mes_periodo.toLowerCase()
-      return aptoNum.includes(term) || nom.includes(term) || per.includes(term)
+      return aptoNum.includes(term) || nom.includes(term) || tel.includes(term) || per.includes(term)
     })
   }
   return lista
@@ -749,10 +775,22 @@ function obtenerNumeroApto(aptoId) {
 
 function obtenerNombreHabitantePorAptoId(aptoId) {
   const apto = aptosStore.lista.find((a) => a.id === aptoId)
-  if (apto && apto.propietario) {
-    return `${apto.propietario.nombre} ${apto.propietario.apellido}`.trim()
+  if (apto) {
+    const habitante = apto.propietario || usuariosStore.lista.find((u) => u.id === apto.propietario_id)
+    if (habitante) {
+      return `${habitante.nombre} ${habitante.apellido}`.trim()
+    }
   }
   return 'Sin habitante'
+}
+
+function obtenerTelefonoHabitantePorAptoId(aptoId) {
+  const apto = aptosStore.lista.find((a) => a.id === aptoId)
+  if (apto) {
+    const habitante = apto.propietario || usuariosStore.lista.find((u) => u.id === apto.propietario_id)
+    return habitante?.telefono_whatsapp || ''
+  }
+  return ''
 }
 
 function abrirExpedienteApto(apto) {
