@@ -144,26 +144,20 @@
               </div>
             </div>
 
-            <!-- Fila 3: Datos del Apartamento -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <!-- Fila 3: Apartamento y Piso -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <NeuInput
                 id="reg_apto"
                 label="N° Apartamento"
                 v-model="formRegistro.numero_apto"
-                placeholder="Ej. 2-5, 1-A"
+                placeholder="Ej. 2-5"
                 required
               />
               <NeuInput
                 id="reg_piso"
                 label="Piso"
                 v-model="formRegistro.piso"
-                placeholder="Ej. 2"
-              />
-              <NeuInput
-                id="reg_torre"
-                label="Torre"
-                v-model="formRegistro.torre"
-                placeholder="Ej. A o Principal"
+                placeholder="Ej. 2 (o PB)"
               />
             </div>
 

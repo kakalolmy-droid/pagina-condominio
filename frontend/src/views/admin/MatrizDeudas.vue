@@ -57,7 +57,7 @@
           <thead>
             <tr class="border-b border-neu-shadow-dark text-neu-text-light">
               <th class="pb-3 font-semibold">Apto</th>
-              <th class="pb-3 font-semibold">Torre / Piso</th>
+              <th class="pb-3 font-semibold">Piso</th>
               <th class="pb-3 font-semibold">Propietario Titular</th>
               <th class="pb-3 font-semibold">Contacto Directo</th>
               <th class="pb-3 font-semibold">Meses Impagos</th>
@@ -74,7 +74,7 @@
               class="border-b border-neu-bg-dark hover:bg-neu-bg-dark/50 transition-colors"
             >
               <td class="py-3 font-bold text-neu-green">{{ item.numero_apto }}</td>
-              <td class="py-3 text-neu-text-light">{{ item.torre }} - P{{ item.piso || 'B' }}</td>
+              <td class="py-3 text-neu-text font-medium">Piso {{ item.piso || 'PB' }}</td>
               <td class="py-3 font-semibold text-neu-text">{{ item.propietario }}</td>
               <td class="py-3 text-neu-text">
                 <a
@@ -151,12 +151,12 @@ const matrizFiltrada = computed(() => {
     lista = lista.filter((a) => a.estado === filtroEstado.value)
   }
   if (busqueda.value) {
-    const q = busqueda.value.toLowerCase()
+    const q = busqueda.value.toLowerCase().trim()
     lista = lista.filter(
       (a) =>
         a.numero_apto.toLowerCase().includes(q) ||
         a.propietario.toLowerCase().includes(q) ||
-        a.torre.toLowerCase().includes(q)
+        (a.piso && (a.piso.toString().toLowerCase() === q || `piso ${a.piso}`.toLowerCase().includes(q)))
     )
   }
   return lista

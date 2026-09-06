@@ -34,7 +34,7 @@
         <input
           v-model="busqueda"
           type="text"
-          placeholder="Buscar por número de apto, torre o piso..."
+          placeholder="Buscar por número de apto o piso..."
           class="input-neu text-sm"
         />
       </div>
@@ -78,7 +78,6 @@
             <tr class="border-b border-neu-shadow-dark text-neu-text-light">
               <th class="pb-3 font-semibold">Inmueble / Apto</th>
               <th class="pb-3 font-semibold">Piso</th>
-              <th class="pb-3 font-semibold">Torre</th>
               <th class="pb-3 font-semibold">Cuota Mensual</th>
               <th class="pb-3 font-semibold text-center">Meses Pendientes</th>
               <th class="pb-3 font-semibold">Total Adeudado</th>
@@ -97,8 +96,7 @@
               <td class="py-3 font-bold text-neu-green">
                 Apto {{ apto.numero_apto }}
               </td>
-              <td class="py-3 text-neu-text">{{ apto.piso || 'PB' }}</td>
-              <td class="py-3 text-neu-text">{{ apto.torre }}</td>
+              <td class="py-3 text-neu-text">Piso {{ apto.piso || 'PB' }}</td>
               <td class="py-3 font-semibold text-neu-text">
                 ${{ parseFloat(apto.alicuota || 15).toFixed(2) }} USD
               </td>
@@ -168,7 +166,7 @@
     <!-- Modal Crear / Editar Apartamento -->
     <NeuModal v-model="modalAbierto" :title="editandoId ? 'Editar Inmueble y Deuda' : 'Registrar Inmueble'">
       <form @submit.prevent="guardarApartamento" class="flex flex-col gap-4">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <NeuInput
             id="numero_apto"
             label="Número de Apto"
@@ -180,13 +178,7 @@
             id="piso"
             label="Piso"
             v-model="form.piso"
-            placeholder="Ej. 2"
-          />
-          <NeuInput
-            id="torre"
-            label="Torre / Bloque"
-            v-model="form.torre"
-            placeholder="Principal"
+            placeholder="Ej. 2 (o PB)"
           />
         </div>
 
@@ -304,12 +296,11 @@ function estaInactivo(aptoId, propId) {
 const aptosFiltrados = computed(() => {
   const lista = aptosStore.lista || []
   if (!busqueda.value) return lista
-  const q = busqueda.value.toLowerCase()
+  const q = busqueda.value.toLowerCase().trim()
   return lista.filter(
     (a) =>
       a.numero_apto.toLowerCase().includes(q) ||
-      (a.torre && a.torre.toLowerCase().includes(q)) ||
-      (a.piso && a.piso.toLowerCase().includes(q))
+      (a.piso && (a.piso.toString().toLowerCase() === q || `piso ${a.piso}`.toLowerCase().includes(q)))
   )
 })
 

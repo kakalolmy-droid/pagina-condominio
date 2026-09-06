@@ -32,22 +32,35 @@
 
       <!-- Barra de Búsqueda y Filtros con Simetría y Altura Homogénea -->
       <div class="flex items-center gap-3 flex-wrap sm:flex-nowrap justify-end">
-        <div class="relative w-full sm:w-64">
+        <div class="relative w-full sm:w-60">
           <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neu-text-light text-xs">
             🔍
           </span>
           <input
             v-model="filtroTexto"
             type="text"
-            placeholder="Buscar por apto o habitante..."
+            placeholder="Buscar por apto, piso o persona..."
             class="input-neu text-xs py-2.5 pl-8 pr-3 w-full"
           />
         </div>
 
+        <!-- Filtro por Pisos del Edificio (PB al Piso 16) -->
+        <select
+          v-model="filtroPiso"
+          class="input-neu text-xs py-2.5 px-3 min-w-[140px] cursor-pointer"
+          title="Filtrar por piso del edificio"
+        >
+          <option value="todos">🏢 Todos los Pisos</option>
+          <option value="PB">Planta Baja (PB)</option>
+          <option v-for="p in pisosDisponibles" :key="p" :value="p">
+            Piso {{ p }}
+          </option>
+        </select>
+
         <select
           v-if="modoVista === 'apartamentos'"
           v-model="filtroEstadoApto"
-          class="input-neu text-xs py-2.5 px-3 min-w-[170px] cursor-pointer"
+          class="input-neu text-xs py-2.5 px-3 min-w-[160px] cursor-pointer"
         >
           <option value="todos">Todos los Estados</option>
           <option value="morosos">Solo con Saldo Pendiente</option>
@@ -113,7 +126,7 @@
                       🏢 Apto {{ apto.numero_apto }}
                     </span>
                     <span class="text-xs text-neu-text-light font-medium whitespace-nowrap">
-                      Piso {{ apto.piso || '—' }} · {{ apto.torre || 'Torre Única' }}
+                      Piso {{ apto.piso || 'PB' }}
                     </span>
                   </div>
                 </td>
@@ -572,8 +585,11 @@ const usuariosStore = useUsuariosStore()
 
 const modoVista = ref('apartamentos') // 'apartamentos' | 'recibos'
 const filtroTexto = ref('')
+const filtroPiso = ref('todos') // 'todos' | 'PB' | '1' ... '16'
 const filtroEstadoApto = ref('todos') // 'todos' | 'morosos' | 'solventes'
 const filtroEstadoRecibo = ref('')
+
+const pisosDisponibles = computed(() => Array.from({ length: 16 }, (_, i) => String(i + 1)))
 
 const modalExpedienteAbierto = ref(false)
 const aptoSeleccionado = ref(null)
@@ -676,21 +692,52 @@ const apartamentosConRecibos = computed(() => {
 
 const apartamentosFiltrados = computed(() => {
   let lista = apartamentosConRecibos.value
+
+  // Filtro por Estado (Solvente / Moroso)
   if (filtroEstadoApto.value === 'solventes') {
     lista = lista.filter((a) => a.esSolvente)
   } else if (filtroEstadoApto.value === 'morosos') {
     lista = lista.filter((a) => !a.esSolvente)
   }
 
+  // Filtro por Piso (PB al 16)
+  if (filtroPiso.value !== 'todos') {
+    const target = filtroPiso.value.trim().toUpperCase()
+    lista = lista.filter((a) => {
+      const p = String(a.piso || '').trim().toUpperCase()
+      if (target === 'PB') return p === 'PB' || p === '0'
+      return p === target
+    })
+  }
+
+  // Buscador de texto inteligente (apto, piso, persona, cédula)
   if (filtroTexto.value.trim()) {
     const term = filtroTexto.value.trim().toLowerCase()
-    lista = lista.filter(
-      (a) =>
-        a.numero_apto.toLowerCase().includes(term) ||
-        a.habitanteNombre.toLowerCase().includes(term) ||
-        (a.habitanteEmail && a.habitanteEmail.toLowerCase().includes(term)) ||
-        (a.habitanteTelefono && a.habitanteTelefono.toLowerCase().includes(term))
-    )
+    const termSinGuion = term.replace(/[^a-z0-9]/g, '')
+    lista = lista.filter((a) => {
+      const aptoNum = String(a.numero_apto || '').toLowerCase()
+      const aptoNumSinGuion = aptoNum.replace(/[^a-z0-9]/g, '')
+      const piso = String(a.piso || '').toLowerCase()
+      const nom = String(a.habitanteNombre || '').toLowerCase()
+      const email = String(a.habitanteEmail || '').toLowerCase()
+      const cedula = String(a.habitanteCedula || '').toLowerCase()
+      const tel = String(a.habitanteTelefono || '').toLowerCase()
+
+      // Coincidencia con número de apartamento
+      if (aptoNum.includes(term) || (termSinGuion && aptoNumSinGuion.includes(termSinGuion))) return true
+      if (`apto ${aptoNum}`.includes(term)) return true
+
+      // Coincidencia con piso
+      if (piso === term || `piso ${piso}`.includes(term) || (term === 'pb' && (piso === '0' || piso.includes('pb')))) return true
+
+      // Coincidencia con persona, email o cédula
+      if (nom.includes(term) || email.includes(term) || cedula.includes(term)) return true
+
+      // Teléfono: solo si el término tiene 4 o más caracteres o inicia con + o 0 (evita falsos positivos con dígitos individuales)
+      if ((term.length >= 4 || term.startsWith('+') || term.startsWith('0')) && tel.includes(term)) return true
+
+      return false
+    })
   }
   return lista
 })
@@ -700,14 +747,38 @@ const recibosFiltradosGeneral = computed(() => {
   if (filtroEstadoRecibo.value) {
     lista = lista.filter((r) => r.estado_pago === filtroEstadoRecibo.value)
   }
+
+  // Filtro por Piso en recibos
+  if (filtroPiso.value !== 'todos') {
+    const target = filtroPiso.value.trim().toUpperCase()
+    lista = lista.filter((r) => {
+      const apto = aptosStore.lista.find((a) => a.id === r.apartamento_id)
+      if (!apto) return false
+      const p = String(apto.piso || '').trim().toUpperCase()
+      if (target === 'PB') return p === 'PB' || p === '0'
+      return p === target
+    })
+  }
+
   if (filtroTexto.value.trim()) {
     const term = filtroTexto.value.trim().toLowerCase()
+    const termSinGuion = term.replace(/[^a-z0-9]/g, '')
     lista = lista.filter((r) => {
-      const aptoNum = obtenerNumeroApto(r.apartamento_id).toLowerCase()
+      const apto = aptosStore.lista.find((a) => a.id === r.apartamento_id)
+      const aptoNum = String(apto?.numero_apto || obtenerNumeroApto(r.apartamento_id)).toLowerCase()
+      const aptoNumSinGuion = aptoNum.replace(/[^a-z0-9]/g, '')
+      const piso = String(apto?.piso || '').toLowerCase()
       const nom = obtenerNombreHabitantePorAptoId(r.apartamento_id).toLowerCase()
       const tel = obtenerTelefonoHabitantePorAptoId(r.apartamento_id).toLowerCase()
-      const per = r.mes_periodo.toLowerCase()
-      return aptoNum.includes(term) || nom.includes(term) || tel.includes(term) || per.includes(term)
+      const per = String(r.mes_periodo || '').toLowerCase()
+
+      if (aptoNum.includes(term) || (termSinGuion && aptoNumSinGuion.includes(termSinGuion))) return true
+      if (`apto ${aptoNum}`.includes(term)) return true
+      if (piso === term || `piso ${piso}`.includes(term) || (term === 'pb' && (piso === '0' || piso.includes('pb')))) return true
+      if (nom.includes(term) || per.includes(term)) return true
+      if ((term.length >= 4 || term.startsWith('+') || term.startsWith('0')) && tel.includes(term)) return true
+
+      return false
     })
   }
   return lista

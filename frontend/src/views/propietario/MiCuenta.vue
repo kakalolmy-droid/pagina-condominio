@@ -10,8 +10,7 @@
               <h2 class="text-xl font-bold text-neu-green">Hola, {{ authStore.nombre }}</h2>
             </div>
             <p class="text-xs text-neu-text-light mt-1">
-              Inmueble: <span class="font-semibold text-neu-text">{{ aptoInfo.numero_apto || 'Cargando...' }}</span>
-              <span v-if="aptoInfo.torre"> | Torre: {{ aptoInfo.torre }}</span>
+              Inmueble: <span class="font-semibold text-neu-text">Apto {{ aptoInfo.numero_apto || 'Cargando...' }}</span>
               <span v-if="aptoInfo.piso"> | Piso: {{ aptoInfo.piso }}</span>
               <span v-if="aptoInfo.alicuota"> | Alícuota: {{ (parseFloat(aptoInfo.alicuota) * 100).toFixed(2) }}%</span>
             </p>

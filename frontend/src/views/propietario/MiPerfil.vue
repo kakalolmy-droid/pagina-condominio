@@ -167,27 +167,19 @@
               <div class="grid grid-cols-2 gap-3">
                 <div class="p-2.5 rounded-neu-sm bg-neu-bg-dark border border-neu-shadow-dark flex items-center justify-between">
                   <div>
-                    <span class="text-[9px] font-bold text-neu-text-light uppercase tracking-wider block">Torre</span>
-                    <span class="text-xs font-bold text-neu-text">{{ apartamento.torre || 'Principal' }}</span>
+                    <span class="text-[9px] font-bold text-neu-text-light uppercase tracking-wider block">Piso</span>
+                    <span class="text-xs font-bold text-neu-text">Piso {{ apartamento.piso || 'PB' }}</span>
                   </div>
                   <span class="text-xs text-neu-text-light">🔒</span>
                 </div>
 
                 <div class="p-2.5 rounded-neu-sm bg-neu-bg-dark border border-neu-shadow-dark flex items-center justify-between">
                   <div>
-                    <span class="text-[9px] font-bold text-neu-text-light uppercase tracking-wider block">Piso</span>
-                    <span class="text-xs font-bold text-neu-text">Piso {{ apartamento.piso || '1' }}</span>
+                    <span class="text-[9px] font-bold text-neu-text-light uppercase tracking-wider block">Alícuota Condominial</span>
+                    <span class="text-xs font-bold text-neu-text">{{ formatAlicuota(apartamento.alicuota) }}%</span>
                   </div>
                   <span class="text-xs text-neu-text-light">🔒</span>
                 </div>
-              </div>
-
-              <div class="p-2.5 rounded-neu-sm bg-neu-bg-dark border border-neu-shadow-dark flex items-center justify-between">
-                <div>
-                  <span class="text-[9px] font-bold text-neu-text-light uppercase tracking-wider block">Alícuota Condominial</span>
-                  <span class="text-xs font-bold text-neu-text">{{ formatAlicuota(apartamento.alicuota) }}%</span>
-                </div>
-                <span class="text-xs text-neu-text-light">🔒</span>
               </div>
 
               <div class="p-3 rounded-neu-sm bg-neu-bg-dark border border-neu-shadow-dark flex items-center justify-between">
