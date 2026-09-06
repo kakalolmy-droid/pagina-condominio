@@ -41,50 +41,72 @@
             required
           />
 
-          <NeuButton variant="primary" type="submit" :loading="emitiendo" class="w-full justify-center">
-            🚀 Emitir a Todos
-          </NeuButton>
+          <div class="flex flex-col justify-end">
+            <span class="text-sm font-medium text-transparent select-none hidden md:block mb-1">Emitir</span>
+            <NeuButton variant="primary" type="submit" :loading="emitiendo" class="w-full justify-center h-[46px] font-bold">
+              🚀 Emitir a Todos
+            </NeuButton>
+          </div>
         </form>
       </NeuCard>
     </div>
 
     <!-- Selector Neumórfico de Pestaña: Vista por Apartamentos (PB al 16) vs Vista de Recibos Sueltos -->
-    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6">
-      <div class="flex rounded-neu-sm bg-neu-bg-dark p-1.5 border border-neu-shadow-dark gap-1 max-w-md">
+    <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 mb-6">
+      <div class="inline-flex rounded-neu bg-neu-bg-dark p-1.5 border border-neu-shadow-dark gap-1 shadow-neu-inset">
         <button
           type="button"
           @click="modoVista = 'apartamentos'"
-          class="flex-1 py-2 px-3 text-xs font-bold rounded-neu-sm transition-all cursor-pointer text-center whitespace-nowrap"
-          :class="modoVista === 'apartamentos' ? 'bg-neu-bg shadow-neu-sm text-neu-green' : 'text-neu-text-light hover:text-neu-text'"
+          class="py-2.5 px-4 text-xs font-bold rounded-neu-sm transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"
+          :class="modoVista === 'apartamentos'
+            ? 'bg-neu-bg shadow-neu-sm text-neu-green font-extrabold'
+            : 'text-neu-text-light hover:text-neu-text'"
         >
-          🏢 Por Apartamentos y Residentes (PB al 16)
+          <span>🏢</span>
+          <span>Por Apartamentos y Residentes (PB al 16)</span>
         </button>
         <button
           type="button"
           @click="modoVista = 'recibos'"
-          class="flex-1 py-2 px-3 text-xs font-bold rounded-neu-sm transition-all cursor-pointer text-center whitespace-nowrap"
-          :class="modoVista === 'recibos' ? 'bg-neu-bg shadow-neu-sm text-neu-green' : 'text-neu-text-light hover:text-neu-text'"
+          class="py-2.5 px-4 text-xs font-bold rounded-neu-sm transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"
+          :class="modoVista === 'recibos'
+            ? 'bg-neu-bg shadow-neu-sm text-neu-green font-extrabold'
+            : 'text-neu-text-light hover:text-neu-text'"
         >
-          📄 Lista General de Recibos
+          <span>📄</span>
+          <span>Lista General de Recibos</span>
         </button>
       </div>
 
-      <!-- Barra de Búsqueda y Filtros -->
-      <div class="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-        <input
-          v-model="filtroTexto"
-          type="text"
-          placeholder="Buscar apartamento o persona..."
-          class="input-neu text-xs py-2 px-3 w-full sm:w-60"
-        />
+      <!-- Barra de Búsqueda y Filtros con Simetría y Altura Homogénea -->
+      <div class="flex items-center gap-3 flex-wrap sm:flex-nowrap justify-end">
+        <div class="relative w-full sm:w-64">
+          <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neu-text-light text-xs">
+            🔍
+          </span>
+          <input
+            v-model="filtroTexto"
+            type="text"
+            placeholder="Buscar por apto o habitante..."
+            class="input-neu text-xs py-2.5 pl-8 pr-3 w-full"
+          />
+        </div>
 
-        <select v-if="modoVista === 'apartamentos'" v-model="filtroEstadoApto" class="input-neu text-xs py-2 px-3">
+        <select
+          v-if="modoVista === 'apartamentos'"
+          v-model="filtroEstadoApto"
+          class="input-neu text-xs py-2.5 px-3 min-w-[170px] cursor-pointer"
+        >
           <option value="todos">Todos los Estados</option>
           <option value="morosos">Solo con Saldo Pendiente</option>
           <option value="solventes">Solo Solventes (Al día)</option>
         </select>
 
-        <select v-else v-model="filtroEstadoRecibo" class="input-neu text-xs py-2 px-3">
+        <select
+          v-else
+          v-model="filtroEstadoRecibo"
+          class="input-neu text-xs py-2.5 px-3 min-w-[150px] cursor-pointer"
+        >
           <option value="">Todos los Estados</option>
           <option value="pendiente">Pendientes</option>
           <option value="parcial">Parciales</option>
@@ -96,124 +118,152 @@
     <!-- ──────────────── VISTA 1: POR APARTAMENTOS Y RESIDENTES (ORDENADOS PB AL 16) ──────────────── -->
     <div v-if="modoVista === 'apartamentos'">
       <NeuCard>
-        <div class="flex items-center justify-between pb-3 mb-3 border-b border-neu-shadow-dark/40">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3.5 mb-3 border-b border-neu-shadow-dark/40 gap-2">
           <div>
-            <h3 class="text-base font-bold text-neu-green">Control de Inmuebles y Residentes</h3>
-            <p class="text-[11px] text-neu-text-light">
-              Ordenado de Planta Baja (PB) al piso 16. Haz clic en "Ver Recibos y Pagos" para consultar todos los meses y fotos de comprobantes de cada persona.
+            <h3 class="text-base font-bold text-neu-green flex items-center gap-2">
+              <span>🏢</span> Control de Inmuebles y Residentes
+            </h3>
+            <p class="text-xs text-neu-text-light mt-0.5">
+              Ordenado de Planta Baja (PB) al piso 16. Haz clic en "Ver Recibos y Pagos" para consultar meses y fotos de comprobantes.
             </p>
           </div>
-          <span class="text-xs font-bold text-neu-text-light">
-            Total: <span class="text-neu-green font-extrabold">{{ apartamentosFiltrados.length }}</span> inmuebles
-          </span>
+          <div class="flex items-center gap-2">
+            <span class="px-3 py-1 rounded-full bg-neu-bg shadow-neu-sm text-xs font-bold text-neu-text-light border border-white/60 whitespace-nowrap">
+              Total: <strong class="text-neu-green font-extrabold">{{ apartamentosFiltrados.length }}</strong> inmuebles
+            </span>
+          </div>
         </div>
 
         <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm">
+          <table class="w-full text-left border-collapse">
             <thead>
-              <tr class="border-b border-neu-shadow-dark text-neu-text-light">
-                <th class="pb-3 font-semibold">Inmueble</th>
-                <th class="pb-3 font-semibold">Persona que Habita / Propietario</th>
-                <th class="pb-3 font-semibold">Cuota Mensual</th>
-                <th class="pb-3 font-semibold text-center">Recibos</th>
-                <th class="pb-3 font-semibold">Deuda Total ($ USD)</th>
-                <th class="pb-3 font-semibold">Deuda en Bs. (BCV)</th>
-                <th class="pb-3 font-semibold text-center">Estado</th>
-                <th class="pb-3 font-semibold text-center">Expediente</th>
+              <tr class="border-b border-neu-shadow-dark text-neu-text-light text-[11px] uppercase tracking-wider">
+                <th class="py-3 px-3.5 font-bold text-left whitespace-nowrap">Inmueble</th>
+                <th class="py-3 px-3.5 font-bold text-left whitespace-nowrap">Persona que Habita</th>
+                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Cuota Fijada</th>
+                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Recibos</th>
+                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Deuda ($ USD)</th>
+                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Deuda en Bs.</th>
+                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Estado</th>
+                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Expediente</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-neu-bg-dark">
               <tr
                 v-for="apto in apartamentosFiltrados"
                 :key="apto.id"
-                class="border-b border-neu-bg-dark hover:bg-neu-bg-dark/50 transition-colors"
+                class="hover:bg-neu-bg-dark/40 transition-colors"
               >
                 <!-- Apartamento -->
-                <td class="py-3">
-                  <div class="flex items-center gap-2">
-                    <span class="px-2.5 py-1 rounded-neu-sm bg-neu-bg shadow-neu-sm font-extrabold text-neu-green text-xs border border-white/60 whitespace-nowrap">
+                <td class="py-3.5 px-3.5 align-middle whitespace-nowrap">
+                  <div class="flex items-center gap-2.5">
+                    <span class="px-2.5 py-1 rounded-neu-sm bg-neu-bg shadow-neu-sm font-extrabold text-neu-green text-xs border border-white/60 shrink-0">
                       🏢 Apto {{ apto.numero_apto }}
                     </span>
-                    <span class="text-[10px] text-neu-text-light font-medium block">
-                      Piso {{ apto.piso || '—' }} | {{ apto.torre || 'Principal' }}
+                    <span class="text-xs text-neu-text-light font-medium whitespace-nowrap">
+                      Piso {{ apto.piso || '—' }} · {{ apto.torre || 'Torre Única' }}
                     </span>
                   </div>
                 </td>
 
                 <!-- Habitante / Propietario -->
-                <td class="py-3">
-                  <div class="flex items-center gap-2.5">
+                <td class="py-3.5 px-3.5 align-middle">
+                  <div class="flex items-center gap-3">
                     <div
-                      class="w-7 h-7 rounded-full text-white font-bold flex items-center justify-center text-xs shadow-sm shrink-0"
+                      class="w-8 h-8 rounded-full text-white font-extrabold flex items-center justify-center text-xs shadow-sm shrink-0"
                       :class="apto.propietario ? 'bg-neu-green' : 'bg-neutral-400'"
                     >
                       {{ apto.propietario ? apto.habitanteNombre.charAt(0) : '?' }}
                     </div>
-                    <div>
-                      <span class="font-bold text-neu-text block leading-tight text-xs sm:text-sm">
+                    <div class="min-w-0">
+                      <span class="font-bold text-neu-text block leading-snug text-xs sm:text-sm truncate">
                         {{ apto.habitanteNombre }}
                       </span>
-                      <span v-if="apto.habitanteTelefono" class="text-[10px] text-neu-text-light block font-mono">
+                      <span v-if="apto.habitanteTelefono" class="text-[11px] text-neu-text-light block font-mono">
                         📱 {{ apto.habitanteTelefono }}
                       </span>
-                      <span v-else-if="!apto.propietario" class="text-[10px] text-amber-700 italic block">
-                        Apartamento sin residente asignado
+                      <span v-else-if="!apto.propietario" class="text-[11px] text-amber-700 italic block">
+                        Sin residente registrado
                       </span>
                     </div>
                   </div>
                 </td>
 
                 <!-- Cuota mensual por alícuota -->
-                <td class="py-3 font-semibold text-neu-text text-xs">
-                  {{ formatUSD(apto.alicuota) }}
-                  <span class="text-[10px] text-neu-text-light block font-normal">Cuota fijada</span>
+                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
+                  <span class="font-bold text-neu-text text-xs sm:text-sm block">
+                    {{ formatUSD(apto.alicuota) }}
+                  </span>
+                  <span class="text-[10px] text-neu-text-light block font-normal">
+                    mensual
+                  </span>
                 </td>
 
                 <!-- Cantidad de recibos -->
-                <td class="py-3 text-center">
-                  <span
-                    class="px-2 py-0.5 rounded-full text-[11px] font-bold inline-flex items-center gap-1"
-                    :class="apto.totalPendientes > 0 ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'"
-                  >
-                    {{ apto.totalPendientes > 0 ? `⚠️ ${apto.totalPendientes} pendiente(s)` : `✓ ${apto.totalEmitidos} al día` }}
-                  </span>
+                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
+                  <div class="flex items-center justify-center">
+                    <span
+                      class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap min-w-[125px] shadow-sm"
+                      :class="apto.totalPendientes > 0 ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'"
+                    >
+                      <span>{{ apto.totalPendientes > 0 ? '⚠️' : '✓' }}</span>
+                      <span>{{ apto.totalPendientes > 0 ? `${apto.totalPendientes} pendiente(s)` : `${apto.totalEmitidos} al día` }}</span>
+                    </span>
+                  </div>
                 </td>
 
                 <!-- Deuda Total USD -->
-                <td class="py-3 font-bold text-xs sm:text-sm" :class="apto.totalDeudaUSD > 0 ? 'text-neu-danger' : 'text-neu-success'">
-                  {{ formatUSD(apto.totalDeudaUSD) }}
-                </td>
-
-                <!-- Deuda Equivalente en VES -->
-                <td class="py-3 text-xs text-neu-text-light font-medium">
-                  {{ formatVES(apto.totalDeudaVES) }}
-                </td>
-
-                <!-- Estado -->
-                <td class="py-3 text-center">
+                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
                   <span
-                    class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider"
-                    :class="apto.esSolvente ? 'badge-success' : 'badge-danger'"
+                    class="font-extrabold text-xs sm:text-sm"
+                    :class="apto.totalDeudaUSD > 0 ? 'text-neu-danger' : 'text-neu-success'"
                   >
-                    {{ apto.esSolvente ? '✓ SOLVENTE' : '● MOROSO' }}
+                    {{ formatUSD(apto.totalDeudaUSD) }}
                   </span>
                 </td>
 
+                <!-- Deuda Equivalente en VES -->
+                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
+                  <span class="text-xs text-neu-text-light font-semibold">
+                    {{ formatVES(apto.totalDeudaVES) }}
+                  </span>
+                </td>
+
+                <!-- Estado (Simetría Absoluta) -->
+                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
+                  <div class="flex items-center justify-center">
+                    <span
+                      class="inline-flex items-center justify-center gap-1.5 px-3.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider whitespace-nowrap shadow-sm min-w-[105px]"
+                      :class="apto.esSolvente ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'"
+                    >
+                      <span class="text-[11px] leading-none">{{ apto.esSolvente ? '✓' : '●' }}</span>
+                      <span class="leading-none">{{ apto.esSolvente ? 'SOLVENTE' : 'MOROSO' }}</span>
+                    </span>
+                  </div>
+                </td>
+
                 <!-- Botón de acción para ver sus recibos y comprobantes -->
-                <td class="py-3 text-center">
-                  <button
-                    @click="abrirExpedienteApto(apto)"
-                    class="px-3 py-1.5 rounded-neu-sm text-xs font-bold bg-neu-bg shadow-neu-sm hover:shadow-neu-inset text-neu-green border border-white/60 transition-all cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap"
-                    title="Ver todos los meses de pago y fotos de comprobantes de esta persona"
-                  >
-                    👁️ Ver Recibos y Pagos
-                  </button>
+                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
+                  <div class="flex items-center justify-center">
+                    <button
+                      type="button"
+                      @click="abrirExpedienteApto(apto)"
+                      class="px-3.5 py-1.5 rounded-neu-sm text-xs font-bold bg-neu-bg shadow-neu-sm hover:shadow-neu-inset text-neu-green border border-white/60 transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
+                      title="Ver todos los meses de pago y fotos de comprobantes de esta persona"
+                    >
+                      <span>👁️</span>
+                      <span>Ver Recibos y Pagos</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
 
               <tr v-if="apartamentosFiltrados.length === 0">
-                <td colspan="8" class="py-8 text-center text-neu-text-light">
-                  No se encontraron apartamentos con los filtros seleccionados.
+                <td colspan="8" class="py-12 text-center text-neu-text-light">
+                  <div class="flex flex-col items-center justify-center gap-2">
+                    <span class="text-2xl">🔍</span>
+                    <p class="text-sm">No se encontraron apartamentos con los filtros seleccionados.</p>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -225,64 +275,104 @@
     <!-- ──────────────── VISTA 2: LISTA GENERAL DE RECIBOS SUELTOS ──────────────── -->
     <div v-else>
       <NeuCard>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3.5 mb-3 border-b border-neu-shadow-dark/40 gap-2">
+          <div>
+            <h3 class="text-base font-bold text-neu-green flex items-center gap-2">
+              <span>📄</span> Lista General de Recibos
+            </h3>
+            <p class="text-xs text-neu-text-light mt-0.5">
+              Histórico cronológico de todos los recibos emitidos en el condominio.
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="px-3 py-1 rounded-full bg-neu-bg shadow-neu-sm text-xs font-bold text-neu-text-light border border-white/60 whitespace-nowrap">
+              Total: <strong class="text-neu-green font-extrabold">{{ recibosFiltradosGeneral.length }}</strong> recibos
+            </span>
+          </div>
+        </div>
+
         <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm">
+          <table class="w-full text-left border-collapse">
             <thead>
-              <tr class="border-b border-neu-shadow-dark text-neu-text-light">
-                <th class="pb-3 font-semibold">Período</th>
-                <th class="pb-3 font-semibold">Apartamento</th>
-                <th class="pb-3 font-semibold">Residente</th>
-                <th class="pb-3 font-semibold">Monto Total</th>
-                <th class="pb-3 font-semibold">Monto Pendiente</th>
-                <th class="pb-3 font-semibold">Vencimiento</th>
-                <th class="pb-3 font-semibold text-center">Estado</th>
-                <th class="pb-3 font-semibold text-center">Comprobante</th>
-                <th class="pb-3 font-semibold text-center">Acciones</th>
+              <tr class="border-b border-neu-shadow-dark text-neu-text-light text-[11px] uppercase tracking-wider">
+                <th class="py-3 px-3.5 font-bold text-left whitespace-nowrap">Período</th>
+                <th class="py-3 px-3.5 font-bold text-left whitespace-nowrap">Apartamento</th>
+                <th class="py-3 px-3.5 font-bold text-left whitespace-nowrap">Residente</th>
+                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Monto Total</th>
+                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Monto Pendiente</th>
+                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Vencimiento</th>
+                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Estado</th>
+                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Comprobante</th>
+                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Acción</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-neu-bg-dark">
               <tr
                 v-for="recibo in recibosFiltradosGeneral"
                 :key="recibo.id"
-                class="border-b border-neu-bg-dark hover:bg-neu-bg-dark/50 transition-colors"
+                class="hover:bg-neu-bg-dark/40 transition-colors"
               >
-                <td class="py-3 font-bold text-neu-green">{{ formatPeriodo(recibo.mes_periodo) }}</td>
-                <td class="py-3 font-semibold text-neu-text">Apto {{ obtenerNumeroApto(recibo.apartamento_id) }}</td>
-                <td class="py-3 text-xs text-neu-text">
-                  <span class="font-bold block">{{ obtenerNombreHabitantePorAptoId(recibo.apartamento_id) }}</span>
+                <td class="py-3.5 px-3.5 align-middle font-bold text-neu-green whitespace-nowrap">
+                  {{ formatPeriodo(recibo.mes_periodo) }}
                 </td>
-                <td class="py-3 font-bold text-neu-text">{{ formatUSD(recibo.monto_total_usd) }}</td>
-                <td class="py-3 font-bold" :class="recibo.monto_pendiente_usd > 0 ? 'text-neu-danger' : 'text-neu-success'">
+                <td class="py-3.5 px-3.5 align-middle whitespace-nowrap">
+                  <span class="px-2.5 py-1 rounded-neu-sm bg-neu-bg shadow-neu-sm font-extrabold text-neu-green text-xs border border-white/60">
+                    🏢 Apto {{ obtenerNumeroApto(recibo.apartamento_id) }}
+                  </span>
+                </td>
+                <td class="py-3.5 px-3.5 align-middle">
+                  <span class="font-bold text-neu-text text-xs sm:text-sm block truncate max-w-[180px]">
+                    {{ obtenerNombreHabitantePorAptoId(recibo.apartamento_id) }}
+                  </span>
+                </td>
+                <td class="py-3.5 px-3.5 align-middle text-center font-bold text-neu-text text-xs sm:text-sm whitespace-nowrap">
+                  {{ formatUSD(recibo.monto_total_usd) }}
+                </td>
+                <td class="py-3.5 px-3.5 align-middle text-center font-extrabold text-xs sm:text-sm whitespace-nowrap" :class="recibo.monto_pendiente_usd > 0 ? 'text-neu-danger' : 'text-neu-success'">
                   {{ formatUSD(recibo.monto_pendiente_usd) }}
                 </td>
-                <td class="py-3 text-neu-text-light text-xs">{{ formatFecha(recibo.fecha_vencimiento) }}</td>
-                <td class="py-3 text-center">
-                  <EstadoPagoBadge :estado="recibo.estado_pago" />
+                <td class="py-3.5 px-3.5 align-middle text-center text-neu-text-light text-xs whitespace-nowrap font-medium">
+                  {{ formatFecha(recibo.fecha_vencimiento) }}
                 </td>
-                <td class="py-3 text-center">
-                  <button
-                    v-if="recibo.comprobante_url"
-                    @click="verFotoComprobante(recibo)"
-                    class="px-2.5 py-1 rounded-neu-sm text-xs font-bold text-neu-green bg-neu-bg shadow-neu-sm hover:shadow-neu-inset transition-all cursor-pointer inline-flex items-center gap-1"
-                    title="Ver foto del comprobante enviado"
-                  >
-                    📷 Ver Captura
-                  </button>
-                  <span v-else class="text-xs text-neu-text-light italic">—</span>
+                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
+                  <div class="flex items-center justify-center">
+                    <EstadoPagoBadge :estado="recibo.estado_pago" />
+                  </div>
                 </td>
-                <td class="py-3 text-center">
-                  <button
-                    @click="confirmarEliminarRecibo(recibo)"
-                    class="p-2 rounded-neu-sm text-neu-danger hover:text-red-500 hover:shadow-neu-pressed transition-all duration-200 cursor-pointer"
-                    title="Eliminar este recibo"
-                  >
-                    🗑️
-                  </button>
+                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
+                  <div class="flex items-center justify-center">
+                    <button
+                      v-if="recibo.comprobante_url"
+                      type="button"
+                      @click="verFotoComprobante(recibo)"
+                      class="px-3 py-1.5 rounded-neu-sm text-xs font-bold text-neu-green bg-neu-bg shadow-neu-sm hover:shadow-neu-inset border border-white/60 transition-all cursor-pointer inline-flex items-center gap-1 whitespace-nowrap"
+                      title="Ver foto del comprobante enviado"
+                    >
+                      <span>📷</span>
+                      <span>Ver Captura</span>
+                    </button>
+                    <span v-else class="text-xs text-neu-text-light italic font-medium">—</span>
+                  </div>
+                </td>
+                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
+                  <div class="flex items-center justify-center">
+                    <button
+                      type="button"
+                      @click="confirmarEliminarRecibo(recibo)"
+                      class="p-2 rounded-neu-sm text-neu-danger hover:text-red-600 hover:bg-rose-50 transition-all cursor-pointer"
+                      title="Eliminar este recibo"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </td>
               </tr>
               <tr v-if="recibosFiltradosGeneral.length === 0">
-                <td colspan="9" class="py-8 text-center text-neu-text-light">
-                  No hay recibos generados para este filtro.
+                <td colspan="9" class="py-12 text-center text-neu-text-light">
+                  <div class="flex flex-col items-center justify-center gap-2">
+                    <span class="text-2xl">📄</span>
+                    <p class="text-sm">No hay recibos generados para este filtro.</p>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -301,7 +391,7 @@
         <!-- Banner de datos de la persona -->
         <div class="p-3.5 bg-neu-bg-dark rounded-neu-sm border border-neu-shadow-dark flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-neu-green text-white font-black flex items-center justify-center text-base shadow-sm">
+            <div class="w-10 h-10 rounded-full bg-neu-green text-white font-black flex items-center justify-center text-base shadow-sm shrink-0">
               {{ aptoSeleccionado.habitanteNombre ? aptoSeleccionado.habitanteNombre.charAt(0) : 'A' }}
             </div>
             <div>
@@ -329,83 +419,92 @@
 
         <!-- Tabla de todos los recibos mensuales de este residente -->
         <div class="overflow-x-auto max-h-[55vh]">
-          <table class="w-full text-left text-xs sm:text-sm">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
             <thead>
-              <tr class="border-b border-neu-shadow-dark text-neu-text-light sticky top-0 bg-neu-bg">
-                <th class="pb-2 font-semibold">Período / Mes</th>
-                <th class="pb-2 font-semibold">Cuota Total</th>
-                <th class="pb-2 font-semibold">Pendiente</th>
-                <th class="pb-2 font-semibold">Vencimiento</th>
-                <th class="pb-2 font-semibold text-center">Estado</th>
-                <th class="pb-2 font-semibold text-center">Comprobante de Pago</th>
-                <th class="pb-2 font-semibold text-center">Acción</th>
+              <tr class="border-b border-neu-shadow-dark text-neu-text-light text-[11px] uppercase tracking-wider sticky top-0 bg-neu-bg">
+                <th class="py-2.5 px-3 font-bold text-left whitespace-nowrap">Período / Mes</th>
+                <th class="py-2.5 px-3 font-bold text-center whitespace-nowrap">Cuota Total</th>
+                <th class="py-2.5 px-3 font-bold text-center whitespace-nowrap">Pendiente</th>
+                <th class="py-2.5 px-3 font-bold text-center whitespace-nowrap">Vencimiento</th>
+                <th class="py-2.5 px-3 font-bold text-center whitespace-nowrap">Estado</th>
+                <th class="py-2.5 px-3 font-bold text-center whitespace-nowrap">Comprobante de Pago</th>
+                <th class="py-2.5 px-3 font-bold text-center whitespace-nowrap">Acción</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-neu-bg-dark">
               <tr
                 v-for="recibo in aptoSeleccionado.recibos"
                 :key="recibo.id"
-                class="border-b border-neu-bg-dark hover:bg-neu-bg-dark/40 transition-colors"
+                class="hover:bg-neu-bg-dark/40 transition-colors"
               >
                 <!-- Período -->
-                <td class="py-3 font-bold text-neu-green">
+                <td class="py-3 px-3 align-middle font-bold text-neu-green whitespace-nowrap">
                   {{ formatPeriodo(recibo.mes_periodo) }}
                 </td>
 
                 <!-- Cuota Total -->
-                <td class="py-3 font-semibold text-neu-text">
+                <td class="py-3 px-3 align-middle text-center font-semibold text-neu-text whitespace-nowrap">
                   {{ formatUSD(recibo.monto_total_usd) }}
                 </td>
 
                 <!-- Monto Pendiente -->
-                <td class="py-3 font-black" :class="recibo.monto_pendiente_usd > 0 ? 'text-neu-danger' : 'text-neu-success'">
+                <td class="py-3 px-3 align-middle text-center font-black whitespace-nowrap" :class="recibo.monto_pendiente_usd > 0 ? 'text-neu-danger' : 'text-neu-success'">
                   {{ formatUSD(recibo.monto_pendiente_usd) }}
                 </td>
 
                 <!-- Vencimiento -->
-                <td class="py-3 text-neu-text-light text-xs">
+                <td class="py-3 px-3 align-middle text-center text-neu-text-light text-xs whitespace-nowrap font-medium">
                   {{ formatFecha(recibo.fecha_vencimiento) }}
                 </td>
 
                 <!-- Estado -->
-                <td class="py-3 text-center">
-                  <EstadoPagoBadge :estado="recibo.estado_pago" />
+                <td class="py-3 px-3 align-middle text-center whitespace-nowrap">
+                  <div class="flex items-center justify-center">
+                    <EstadoPagoBadge :estado="recibo.estado_pago" />
+                  </div>
                 </td>
 
                 <!-- Comprobante de Pago Enviado por la Persona -->
-                <td class="py-3 text-center">
-                  <div v-if="recibo.comprobante_url" class="flex flex-col items-center gap-1">
+                <td class="py-3 px-3 align-middle text-center whitespace-nowrap">
+                  <div v-if="recibo.comprobante_url" class="flex flex-col items-center justify-center gap-1">
                     <button
                       type="button"
                       @click="verFotoComprobante(recibo)"
-                      class="px-3 py-1 rounded-neu-sm bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer inline-flex items-center gap-1"
+                      class="px-3 py-1.5 rounded-neu-sm bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
                     >
-                      📷 Ver Foto Captura
+                      <span>📷</span>
+                      <span>Ver Foto Captura</span>
                     </button>
-                    <span v-if="recibo.ultimo_pago_referencia" class="text-[10px] text-neu-text-light font-mono">
+                    <span v-if="recibo.ultimo_pago_referencia" class="text-[10px] text-neu-text-light font-mono font-bold">
                       Ref: {{ recibo.ultimo_pago_referencia }}
                     </span>
                   </div>
-                  <div v-else class="text-xs text-neu-text-light italic">
+                  <div v-else class="text-xs text-neu-text-light italic font-medium">
                     Sin comprobante
                   </div>
                 </td>
 
                 <!-- Acción: Eliminar -->
-                <td class="py-3 text-center">
-                  <button
-                    @click="confirmarEliminarRecibo(recibo)"
-                    class="p-1.5 rounded-neu-sm text-neu-danger hover:bg-red-50 transition-all cursor-pointer"
-                    title="Eliminar este recibo"
-                  >
-                    🗑️
-                  </button>
+                <td class="py-3 px-3 align-middle text-center whitespace-nowrap">
+                  <div class="flex items-center justify-center">
+                    <button
+                      type="button"
+                      @click="confirmarEliminarRecibo(recibo)"
+                      class="p-2 rounded-neu-sm text-neu-danger hover:bg-rose-50 transition-all cursor-pointer"
+                      title="Eliminar este recibo"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </td>
               </tr>
 
               <tr v-if="!aptoSeleccionado.recibos || aptoSeleccionado.recibos.length === 0">
-                <td colspan="7" class="py-8 text-center text-neu-text-light">
-                  No hay recibos generados aún para este apartamento.
+                <td colspan="7" class="py-10 text-center text-neu-text-light">
+                  <div class="flex flex-col items-center justify-center gap-2">
+                    <span class="text-2xl">📂</span>
+                    <p class="text-sm">No hay recibos generados aún para este apartamento.</p>
+                  </div>
                 </td>
               </tr>
             </tbody>

@@ -1,5 +1,5 @@
 <template>
-  <span :class="['text-xs font-semibold px-3 py-1 rounded-full', clases[variant]]">
+  <span :class="['text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap inline-flex items-center justify-center min-w-[80px]', clases[variant]]">
     {{ label }}
   </span>
 </template>
