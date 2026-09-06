@@ -1,56 +1,8 @@
 <template>
   <AdminLayout
-    titulo="Emisión y Facturación de Recibos"
-    subtitulo="Gestión de recibos mensuales por apartamento y residente con consulta de comprobantes de pago"
+    titulo="Gestión de Recibos y Pagos"
+    subtitulo="Control de recibos mensuales por apartamento y residente con fotos de comprobantes de pago"
   >
-    <!-- Panel Superior: Generador Masivo de Cuotas -->
-    <div class="mb-8">
-      <NeuCard>
-        <h3 class="text-lg font-bold text-neu-green mb-2">⚡ Emisión Masiva de Cuota Mensual</h3>
-        <p class="text-xs text-neu-text-light mb-4">
-          Ingrese el monto total de gastos comunes en USD para el mes. El sistema calculará la cuota exacta de cada apartamento según su alícuota registrada.
-        </p>
-
-        <form @submit.prevent="ejecutarEmision" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
-          <NeuInput
-            id="periodo"
-            label="Período / Mes (YYYY-MM)"
-            v-model="emisionForm.periodo"
-            placeholder="2026-09"
-            required
-          />
-
-          <NeuInput
-            id="gasto_total"
-            label="Gasto Total del Mes ($ USD)"
-            v-model="emisionForm.gasto_total_usd"
-            type="number"
-            step="0.01"
-            min="1"
-            placeholder="Ej. 1200.00"
-            required
-          />
-
-          <NeuInput
-            id="dias_vencimiento"
-            label="Días para Vencimiento"
-            v-model="emisionForm.dias_vencimiento"
-            type="number"
-            min="1"
-            placeholder="30"
-            required
-          />
-
-          <div class="flex flex-col justify-end">
-            <span class="text-sm font-medium text-transparent select-none hidden md:block mb-1">Emitir</span>
-            <NeuButton variant="primary" type="submit" :loading="emitiendo" class="w-full justify-center h-[46px] font-bold">
-              🚀 Emitir a Todos
-            </NeuButton>
-          </div>
-        </form>
-      </NeuCard>
-    </div>
-
     <!-- Selector Neumórfico de Pestaña: Vista por Apartamentos (PB al 16) vs Vista de Recibos Sueltos -->
     <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 mb-6">
       <div class="inline-flex rounded-neu bg-neu-bg-dark p-1.5 border border-neu-shadow-dark gap-1 shadow-neu-inset">
@@ -607,10 +559,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { AdminLayout } from '@/components/layout'
-import { NeuCard, NeuButton, NeuInput, NeuModal } from '@/components/neumorph'
+import { NeuCard, NeuButton, NeuModal } from '@/components/neumorph'
 import { EstadoPagoBadge } from '@/components/shared'
 import { useRecibosStore, useApartamentosStore, useTasaStore, useUsuariosStore } from '@/stores'
-import { formatUSD, formatVES, formatFecha, formatPeriodo, periodoActual } from '@/utils'
+import { formatUSD, formatVES, formatFecha, formatPeriodo } from '@/utils'
 
 const toast = useToast()
 const recibosStore = useRecibosStore()
@@ -618,7 +570,6 @@ const aptosStore = useApartamentosStore()
 const tasaStore = useTasaStore()
 const usuariosStore = useUsuariosStore()
 
-const emitiendo = ref(false)
 const modoVista = ref('apartamentos') // 'apartamentos' | 'recibos'
 const filtroTexto = ref('')
 const filtroEstadoApto = ref('todos') // 'todos' | 'morosos' | 'solventes'
@@ -629,12 +580,6 @@ const aptoSeleccionado = ref(null)
 
 const modalFotoComprobanteAbierto = ref(false)
 const reciboParaComprobante = ref(null)
-
-const emisionForm = ref({
-  periodo: periodoActual(),
-  gasto_total_usd: '',
-  dias_vencimiento: 30,
-})
 
 onMounted(async () => {
   await Promise.all([
@@ -805,28 +750,6 @@ function esPdf(url) {
 function verFotoComprobante(recibo) {
   reciboParaComprobante.value = recibo
   modalFotoComprobanteAbierto.value = true
-}
-
-async function ejecutarEmision() {
-  if (!emisionForm.value.gasto_total_usd || parseFloat(emisionForm.value.gasto_total_usd) <= 0) {
-    toast.error('Ingrese un monto válido de gastos')
-    return
-  }
-
-  emitiendo.value = true
-  try {
-    const res = await recibosStore.emitirMasivo(emisionForm.value)
-    toast.success(`¡Éxito! ${res.mensaje}`)
-    await Promise.all([
-      recibosStore.cargar(),
-      aptosStore.cargar(),
-    ])
-    emisionForm.value.gasto_total_usd = ''
-  } catch (error) {
-    toast.error(error.response?.data?.detail || 'Error al emitir los recibos')
-  } finally {
-    emitiendo.value = false
-  }
 }
 
 async function confirmarEliminarRecibo(recibo) {
