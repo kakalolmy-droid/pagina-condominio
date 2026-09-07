@@ -89,50 +89,52 @@
     <!-- Tabla de Apartamentos -->
     <NeuCard>
       <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm">
+        <table class="min-w-[1050px] w-full text-left text-sm border-collapse">
           <thead>
-            <tr class="border-b border-neu-shadow-dark text-neu-text-light">
-              <th class="pb-3 font-semibold">Inmueble / Apto</th>
-              <th class="pb-3 font-semibold">Piso</th>
-              <th class="pb-3 font-semibold">Cuota Mensual</th>
-              <th class="pb-3 font-semibold text-center">Meses Pendientes</th>
-              <th class="pb-3 font-semibold">Total Adeudado</th>
-              <th class="pb-3 font-semibold">Propietario Asignado</th>
-              <th class="pb-3 font-semibold text-center">Estado Notificaciones</th>
-              <th class="pb-3 font-semibold text-center">Acciones</th>
+            <tr class="border-b border-neu-shadow-dark text-neu-text-light text-xs uppercase tracking-wider">
+              <th class="py-3.5 px-4 font-bold whitespace-nowrap">Inmueble / Apto</th>
+              <th class="py-3.5 px-4 font-bold whitespace-nowrap">Piso</th>
+              <th class="py-3.5 px-4 font-bold whitespace-nowrap">Cuota Mensual</th>
+              <th class="py-3.5 px-4 font-bold text-center whitespace-nowrap">Meses Pendientes</th>
+              <th class="py-3.5 px-4 font-bold whitespace-nowrap">Total Adeudado</th>
+              <th class="py-3.5 px-4 font-bold whitespace-nowrap">Propietario Asignado</th>
+              <th class="py-3.5 px-4 font-bold text-center whitespace-nowrap">Estado Notificaciones</th>
+              <th class="py-3.5 px-4 font-bold text-center whitespace-nowrap">Acciones</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody class="divide-y divide-neu-bg-dark">
             <tr
               v-for="apto in aptosFiltrados"
               :key="apto.id"
-              class="border-b border-neu-bg-dark hover:bg-neu-bg-dark/50 transition-colors"
+              class="hover:bg-neu-bg-dark/40 transition-colors"
               :class="{ 'opacity-50 bg-neu-bg-dark/40': estaInactivo(apto.id, apto.propietario_id) }"
             >
-              <td class="py-3 font-bold text-neu-green">
-                Apto {{ apto.numero_apto }}
+              <td class="py-3.5 px-4 font-bold text-neu-green whitespace-nowrap">
+                <span class="px-2.5 py-1 rounded-neu-sm bg-neu-bg shadow-neu-sm font-extrabold text-neu-green text-xs border border-white/60">
+                  🏢 Apto {{ apto.numero_apto }}
+                </span>
               </td>
-              <td class="py-3 text-neu-text font-medium">{{ formatPiso(apto.piso) }}</td>
-              <td class="py-3 font-semibold text-neu-text">
+              <td class="py-3.5 px-4 text-neu-text font-medium whitespace-nowrap">{{ formatPiso(apto.piso) }}</td>
+              <td class="py-3.5 px-4 font-semibold text-neu-text whitespace-nowrap">
                 ${{ parseFloat(apto.alicuota || 15).toFixed(2) }} USD
               </td>
-              <td class="py-3 text-center">
+              <td class="py-3.5 px-4 text-center whitespace-nowrap">
                 <span class="font-bold px-2.5 py-1 rounded-full text-xs" :class="(apto.meses_pendientes || 0) > 0 ? 'badge-danger' : 'badge-success'">
                   {{ apto.meses_pendientes || 0 }} mes(es)
                 </span>
               </td>
-              <td class="py-3 font-extrabold text-base" :class="(apto.meses_pendientes || 0) > 0 ? 'text-neu-danger' : 'text-neu-success'">
+              <td class="py-3.5 px-4 font-extrabold text-base whitespace-nowrap" :class="(apto.meses_pendientes || 0) > 0 ? 'text-neu-danger' : 'text-neu-success'">
                 ${{ (parseFloat(apto.alicuota || 15) * (apto.meses_pendientes || 0)).toFixed(2) }} USD
               </td>
-              <td class="py-3 text-neu-text">
-                <span v-if="apto.propietario">
+              <td class="py-3.5 px-4 text-neu-text whitespace-nowrap">
+                <span v-if="apto.propietario" class="font-semibold">
                   👤 {{ apto.propietario.nombre }} {{ apto.propietario.apellido }}
                 </span>
                 <span v-else class="text-xs text-neu-danger italic font-semibold">
                   ⚠️ Sin asignar
                 </span>
               </td>
-              <td class="py-3 text-center">
+              <td class="py-3.5 px-4 text-center whitespace-nowrap">
                 <span
                   class="text-xs font-bold px-3 py-1 rounded-full inline-block"
                   :class="estaInactivo(apto.id, apto.propietario_id) ? 'badge-danger' : 'badge-success'"
@@ -140,12 +142,12 @@
                   {{ estaInactivo(apto.id, apto.propietario_id) ? '○ Desactivado' : '● Activo' }}
                 </span>
               </td>
-              <td class="py-3 text-center">
+              <td class="py-3.5 px-4 text-center whitespace-nowrap">
                 <div class="flex items-center justify-center gap-2">
                   <!-- Botón Desactivar / Activar (Sin borrar datos) -->
                   <button
                     @click="alternarEstado(apto)"
-                    class="px-2.5 py-1.5 rounded-neu-sm text-xs font-bold shadow-neu-sm hover:shadow-neu-inset transition-all cursor-pointer flex items-center gap-1"
+                    class="px-3 py-1.5 rounded-neu-sm text-xs font-bold shadow-neu-sm hover:shadow-neu-inset transition-all cursor-pointer inline-flex items-center gap-1.5"
                     :class="estaInactivo(apto.id, apto.propietario_id) ? 'bg-emerald-700 text-white' : 'bg-amber-600 text-white'"
                     :title="estaInactivo(apto.id, apto.propietario_id) ? 'Reactivar cobros y avisos' : 'Desactivar para que no reciba cobros ni avisos'"
                   >
@@ -163,8 +165,8 @@
               </td>
             </tr>
             <tr v-if="aptosFiltrados.length === 0">
-              <td colspan="9" class="py-8 text-center text-neu-text-light">
-                No hay apartamentos registrados.
+              <td colspan="8" class="py-10 text-center text-neu-text-light">
+                No hay apartamentos registrados para este filtro.
               </td>
             </tr>
           </tbody>

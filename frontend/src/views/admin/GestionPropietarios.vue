@@ -4,21 +4,21 @@
     subtitulo="Gestión de copropietarios, datos de contacto, estados y accesos"
   >
     <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6">
-      <div class="flex items-center gap-3 w-full sm:w-auto">
+      <div class="flex items-center gap-3 w-full sm:w-auto flex-wrap sm:flex-nowrap">
         <!-- Buscador -->
-        <div class="w-full sm:w-72">
+        <div class="w-full sm:w-80">
           <input
             v-model="busqueda"
             type="text"
             placeholder="Buscar por nombre, cédula, apto..."
-            class="input-neu text-xs py-2.5 px-3"
+            class="input-neu text-xs py-2.5 px-3.5 w-full"
           />
         </div>
 
         <!-- Filtro por Piso (PB al 16 y PH) -->
         <select
           v-model="filtroPiso"
-          class="input-neu text-xs py-2.5 px-3 min-w-[150px] cursor-pointer"
+          class="input-neu text-xs py-2.5 px-3.5 min-w-[160px] cursor-pointer shrink-0"
           title="Filtrar propietarios por piso"
         >
           <option value="todos">🏢 Todos los Pisos</option>
@@ -31,7 +31,7 @@
       </div>
 
       <!-- Botón Nuevo Propietario -->
-      <NeuButton variant="primary" @click="abrirModalCrear" class="whitespace-nowrap">
+      <NeuButton variant="primary" @click="abrirModalCrear" class="whitespace-nowrap shrink-0">
         ➕ Registrar Propietario
       </NeuButton>
     </div>
@@ -39,58 +39,58 @@
     <!-- Tabla de Propietarios -->
     <NeuCard>
       <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm">
+        <table class="min-w-[1000px] w-full text-left text-sm border-collapse">
           <thead>
-            <tr class="border-b border-neu-shadow-dark text-neu-text-light">
-              <th class="pb-3 font-semibold">Nombre y Apellido</th>
-              <th class="pb-3 font-semibold">Inmueble Asignado</th>
-              <th class="pb-3 font-semibold">Cédula</th>
-              <th class="pb-3 font-semibold">WhatsApp / Teléfono</th>
-              <th class="pb-3 font-semibold">Correo Electrónico</th>
-              <th class="pb-3 font-semibold text-center">Rol</th>
-              <th class="pb-3 font-semibold text-center">Estado Notificaciones</th>
-              <th class="pb-3 font-semibold text-center">Acciones</th>
+            <tr class="border-b border-neu-shadow-dark text-neu-text-light text-xs uppercase tracking-wider">
+              <th class="py-3.5 px-4 font-bold whitespace-nowrap">Nombre y Apellido</th>
+              <th class="py-3.5 px-4 font-bold whitespace-nowrap">Inmueble Asignado</th>
+              <th class="py-3.5 px-4 font-bold whitespace-nowrap">Cédula</th>
+              <th class="py-3.5 px-4 font-bold whitespace-nowrap">WhatsApp / Teléfono</th>
+              <th class="py-3.5 px-4 font-bold whitespace-nowrap">Correo Electrónico</th>
+              <th class="py-3.5 px-4 font-bold text-center whitespace-nowrap">Rol</th>
+              <th class="py-3.5 px-4 font-bold text-center whitespace-nowrap">Estado Notificaciones</th>
+              <th class="py-3.5 px-4 font-bold text-center whitespace-nowrap">Acciones</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody class="divide-y divide-neu-bg-dark">
             <tr
               v-for="usuario in usuariosFiltrados"
               :key="usuario.id"
-              class="border-b border-neu-bg-dark hover:bg-neu-bg-dark/50 transition-colors"
+              class="hover:bg-neu-bg-dark/40 transition-colors"
               :class="{ 'opacity-50 bg-neu-bg-dark/40': estaInactivo(usuario.id) }"
             >
-              <td class="py-3 font-semibold text-neu-green whitespace-nowrap">
+              <td class="py-3.5 px-4 font-bold text-neu-green whitespace-nowrap">
                 {{ usuario.nombre }} {{ usuario.apellido }}
               </td>
-              <td class="py-3 whitespace-nowrap">
+              <td class="py-3.5 px-4 whitespace-nowrap">
                 <div v-if="getApartamentosUsuario(usuario.id).length > 0" class="flex flex-wrap gap-1.5">
                   <span
                     v-for="apto in getApartamentosUsuario(usuario.id)"
                     :key="apto.id"
-                    class="px-2 py-0.5 rounded-neu-sm bg-neu-bg shadow-neu-sm font-bold text-xs text-neu-green border border-white/60 inline-flex items-center gap-1"
+                    class="px-2.5 py-1 rounded-neu-sm bg-neu-bg shadow-neu-sm font-bold text-xs text-neu-green border border-white/60 inline-flex items-center gap-1.5"
                   >
                     🏢 Apto {{ apto.numero_apto }} <span class="text-neu-text-light font-medium">· {{ formatPiso(apto.piso) }}</span>
                   </span>
                 </div>
                 <span v-else class="text-xs text-neu-text-light italic">Sin inmueble</span>
               </td>
-              <td class="py-3 text-neu-text whitespace-nowrap">{{ usuario.cedula }}</td>
-              <td class="py-3 text-neu-text">
+              <td class="py-3.5 px-4 text-neu-text whitespace-nowrap font-mono text-xs">{{ usuario.cedula }}</td>
+              <td class="py-3.5 px-4 text-neu-text whitespace-nowrap">
                 <a
                   :href="`https://wa.me/${usuario.telefono_whatsapp.replace(/[^0-9]/g, '')}`"
                   target="_blank"
-                  class="text-neu-green hover:underline flex items-center gap-1"
+                  class="text-neu-green hover:underline inline-flex items-center gap-1.5 font-medium text-xs bg-neu-bg-dark/40 px-2 py-1 rounded"
                 >
                   💬 {{ usuario.telefono_whatsapp }}
                 </a>
               </td>
-              <td class="py-3 text-neu-text-light">{{ usuario.email }}</td>
-              <td class="py-3 text-center">
+              <td class="py-3.5 px-4 text-neu-text-light whitespace-nowrap text-xs">{{ usuario.email }}</td>
+              <td class="py-3.5 px-4 text-center whitespace-nowrap">
                 <span :class="usuario.rol === 'admin' ? 'badge-danger' : (usuario.rol === 'junta' ? 'badge-warning' : 'badge-info')">
                   {{ usuario.rol.toUpperCase() }}
                 </span>
               </td>
-              <td class="py-3 text-center">
+              <td class="py-3.5 px-4 text-center whitespace-nowrap">
                 <span
                   class="text-xs font-bold px-3 py-1 rounded-full inline-block"
                   :class="estaInactivo(usuario.id) ? 'badge-danger' : 'badge-success'"
@@ -98,12 +98,12 @@
                   {{ estaInactivo(usuario.id) ? '○ Desactivado' : '● Activo' }}
                 </span>
               </td>
-              <td class="py-3 text-center">
+              <td class="py-3.5 px-4 text-center whitespace-nowrap">
                 <div class="flex items-center justify-center gap-2">
                   <!-- Botón Desactivar / Reactivar Propietario -->
                   <button
                     @click="alternarEstado(usuario)"
-                    class="px-2.5 py-1.5 rounded-neu-sm text-xs font-bold shadow-neu-sm hover:shadow-neu-inset transition-all cursor-pointer flex items-center gap-1"
+                    class="px-3 py-1.5 rounded-neu-sm text-xs font-bold shadow-neu-sm hover:shadow-neu-inset transition-all cursor-pointer inline-flex items-center gap-1.5"
                     :class="estaInactivo(usuario.id) ? 'bg-emerald-700 text-white' : 'bg-amber-600 text-white'"
                     :title="estaInactivo(usuario.id) ? 'Reactivar usuario e inmuebles' : 'Desactivar usuario e inmuebles para que no reciba avisos'"
                   >
@@ -121,7 +121,7 @@
               </td>
             </tr>
             <tr v-if="usuariosFiltrados.length === 0">
-              <td colspan="8" class="py-8 text-center text-neu-text-light">
+              <td colspan="8" class="py-10 text-center text-neu-text-light">
                 No se encontraron propietarios registrados para este filtro.
               </td>
             </tr>
