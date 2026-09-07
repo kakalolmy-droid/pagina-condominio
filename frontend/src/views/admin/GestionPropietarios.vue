@@ -3,22 +3,22 @@
     titulo="Padrón de Propietarios"
     subtitulo="Gestión de copropietarios, datos de contacto, estados y accesos"
   >
-    <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
-      <div class="flex items-center gap-3 w-full md:w-auto flex-wrap">
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6">
+      <div class="flex items-center gap-3 w-full sm:w-auto">
         <!-- Buscador -->
-        <div class="w-full sm:w-80">
+        <div class="w-full sm:w-72">
           <input
             v-model="busqueda"
             type="text"
-            placeholder="Buscar por nombre, cédula, apto o email..."
-            class="input-neu text-sm"
+            placeholder="Buscar por nombre, cédula, apto..."
+            class="input-neu text-xs py-2.5 px-3"
           />
         </div>
 
         <!-- Filtro por Piso (PB al 16 y PH) -->
         <select
           v-model="filtroPiso"
-          class="input-neu text-xs py-3 px-3 min-w-[150px] cursor-pointer"
+          class="input-neu text-xs py-2.5 px-3 min-w-[150px] cursor-pointer"
           title="Filtrar propietarios por piso"
         >
           <option value="todos">🏢 Todos los Pisos</option>
@@ -31,7 +31,7 @@
       </div>
 
       <!-- Botón Nuevo Propietario -->
-      <NeuButton variant="primary" @click="abrirModalCrear">
+      <NeuButton variant="primary" @click="abrirModalCrear" class="whitespace-nowrap">
         ➕ Registrar Propietario
       </NeuButton>
     </div>
@@ -116,13 +116,6 @@
                     title="Editar Datos"
                   >
                     ✏️
-                  </button>
-                  <button
-                    @click="confirmarEliminacion(usuario)"
-                    class="p-2 rounded-neu-sm hover:shadow-neu-inset text-neu-danger transition-all"
-                    title="Eliminar de la Base de Datos"
-                  >
-                    🗑️
                   </button>
                 </div>
               </td>

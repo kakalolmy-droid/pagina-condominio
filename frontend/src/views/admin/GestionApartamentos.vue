@@ -29,21 +29,21 @@
     </div>
 
     <!-- Barra de acciones y búsqueda -->
-    <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
-      <div class="flex items-center gap-3 w-full md:w-auto flex-wrap">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+      <div class="flex items-center gap-3 w-full sm:w-auto">
         <div class="w-full sm:w-72">
           <input
             v-model="busqueda"
             type="text"
             placeholder="Buscar por apto, piso o persona..."
-            class="input-neu text-sm"
+            class="input-neu text-xs py-2.5 px-3"
           />
         </div>
 
         <!-- Filtro por Pisos del Edificio (PB al 16 y PH) -->
         <select
           v-model="filtroPiso"
-          class="input-neu text-xs py-3 px-3 min-w-[150px] cursor-pointer"
+          class="input-neu text-xs py-2.5 px-3 min-w-[150px] cursor-pointer"
           title="Filtrar apartamentos por piso"
         >
           <option value="todos">🏢 Todos los Pisos</option>
@@ -55,7 +55,7 @@
         </select>
       </div>
 
-      <div class="flex items-center gap-2.5 flex-wrap w-full md:w-auto justify-end">
+      <div class="flex items-center gap-2.5 flex-wrap w-full lg:w-auto justify-end">
         <!-- Botón de Simulación de Cambio de Mes -->
         <button
           type="button"
@@ -158,13 +158,6 @@
                     title="Editar Cuota / Meses Pendientes"
                   >
                     ✏️
-                  </button>
-                  <button
-                    @click="confirmarEliminacion(apto)"
-                    class="p-2 rounded-neu-sm hover:shadow-neu-inset text-neu-danger transition-all"
-                    title="Eliminar de la Base de Datos"
-                  >
-                    🗑️
                   </button>
                 </div>
               </td>
