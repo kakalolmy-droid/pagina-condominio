@@ -4,14 +4,30 @@
     subtitulo="Gestión de copropietarios, datos de contacto, estados y accesos"
   >
     <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
-      <!-- Buscador -->
-      <div class="w-full md:w-80">
-        <input
-          v-model="busqueda"
-          type="text"
-          placeholder="Buscar por nombre, cédula o email..."
-          class="input-neu text-sm"
-        />
+      <div class="flex items-center gap-3 w-full md:w-auto flex-wrap">
+        <!-- Buscador -->
+        <div class="w-full sm:w-80">
+          <input
+            v-model="busqueda"
+            type="text"
+            placeholder="Buscar por nombre, cédula, apto o email..."
+            class="input-neu text-sm"
+          />
+        </div>
+
+        <!-- Filtro por Piso (PB al 16 y PH) -->
+        <select
+          v-model="filtroPiso"
+          class="input-neu text-xs py-3 px-3 min-w-[150px] cursor-pointer"
+          title="Filtrar propietarios por piso"
+        >
+          <option value="todos">🏢 Todos los Pisos</option>
+          <option value="PB">Planta Baja (PB)</option>
+          <option v-for="p in 16" :key="p" :value="String(p)">
+            Piso {{ p }}
+          </option>
+          <option value="PH">Penthouse (PH)</option>
+        </select>
       </div>
 
       <!-- Botón Nuevo Propietario -->
@@ -27,6 +43,7 @@
           <thead>
             <tr class="border-b border-neu-shadow-dark text-neu-text-light">
               <th class="pb-3 font-semibold">Nombre y Apellido</th>
+              <th class="pb-3 font-semibold">Inmueble Asignado</th>
               <th class="pb-3 font-semibold">Cédula</th>
               <th class="pb-3 font-semibold">WhatsApp / Teléfono</th>
               <th class="pb-3 font-semibold">Correo Electrónico</th>
@@ -42,10 +59,22 @@
               class="border-b border-neu-bg-dark hover:bg-neu-bg-dark/50 transition-colors"
               :class="{ 'opacity-50 bg-neu-bg-dark/40': estaInactivo(usuario.id) }"
             >
-              <td class="py-3 font-semibold text-neu-green">
+              <td class="py-3 font-semibold text-neu-green whitespace-nowrap">
                 {{ usuario.nombre }} {{ usuario.apellido }}
               </td>
-              <td class="py-3 text-neu-text">{{ usuario.cedula }}</td>
+              <td class="py-3 whitespace-nowrap">
+                <div v-if="getApartamentosUsuario(usuario.id).length > 0" class="flex flex-wrap gap-1.5">
+                  <span
+                    v-for="apto in getApartamentosUsuario(usuario.id)"
+                    :key="apto.id"
+                    class="px-2 py-0.5 rounded-neu-sm bg-neu-bg shadow-neu-sm font-bold text-xs text-neu-green border border-white/60 inline-flex items-center gap-1"
+                  >
+                    🏢 Apto {{ apto.numero_apto }} <span class="text-neu-text-light font-medium">· {{ formatPiso(apto.piso) }}</span>
+                  </span>
+                </div>
+                <span v-else class="text-xs text-neu-text-light italic">Sin inmueble</span>
+              </td>
+              <td class="py-3 text-neu-text whitespace-nowrap">{{ usuario.cedula }}</td>
               <td class="py-3 text-neu-text">
                 <a
                   :href="`https://wa.me/${usuario.telefono_whatsapp.replace(/[^0-9]/g, '')}`"
@@ -99,8 +128,8 @@
               </td>
             </tr>
             <tr v-if="usuariosFiltrados.length === 0">
-              <td colspan="7" class="py-8 text-center text-neu-text-light">
-                No se encontraron propietarios registrados.
+              <td colspan="8" class="py-8 text-center text-neu-text-light">
+                No se encontraron propietarios registrados para este filtro.
               </td>
             </tr>
           </tbody>
@@ -198,6 +227,7 @@ const usuariosStore = useUsuariosStore()
 const aptosStore = useApartamentosStore()
 
 const busqueda = ref('')
+const filtroPiso = ref('todos')
 const modalAbierto = ref(false)
 const editandoId = ref(null)
 const guardando = ref(false)
@@ -234,17 +264,70 @@ function estaInactivo(id) {
   return inactivosIds.value.has(id)
 }
 
+function getApartamentosUsuario(usuarioId) {
+  return (aptosStore.lista || []).filter((a) => a.propietario_id === usuarioId)
+}
+
+function formatPiso(p) {
+  if (!p) return 'PB'
+  const val = String(p).trim().toUpperCase()
+  if (val === 'PB' || val === '0') return 'PB'
+  if (val === 'PH' || val.includes('PENTHOUSE')) return 'PH'
+  return `Piso ${val}`
+}
+
 const usuariosFiltrados = computed(() => {
-  const lista = usuariosStore.lista || []
-  if (!busqueda.value) return lista
-  const q = busqueda.value.toLowerCase()
-  return lista.filter(
-    (u) =>
-      u.nombre.toLowerCase().includes(q) ||
-      u.apellido.toLowerCase().includes(q) ||
-      u.cedula.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q)
-  )
+  let lista = usuariosStore.lista || []
+
+  // Filtro por Piso (PB al 16 y PH)
+  if (filtroPiso.value !== 'todos') {
+    const target = filtroPiso.value.trim().toUpperCase()
+    lista = lista.filter((u) => {
+      const aptos = getApartamentosUsuario(u.id)
+      return aptos.some((a) => {
+        const p = String(a.piso || '').trim().toUpperCase()
+        if (target === 'PB') return p === 'PB' || p === '0'
+        if (target === 'PH') return p === 'PH' || p.includes('PH') || p.includes('PENTHOUSE')
+        return p === target
+      })
+    })
+  }
+
+  // Buscador de texto inteligente
+  if (busqueda.value.trim()) {
+    const q = busqueda.value.toLowerCase().trim()
+    const qSinGuion = q.replace(/[^a-z0-9]/g, '')
+    lista = lista.filter((u) => {
+      const nom = `${u.nombre || ''} ${u.apellido || ''}`.toLowerCase()
+      const ced = String(u.cedula || '').toLowerCase()
+      const email = String(u.email || '').toLowerCase()
+      const tel = String(u.telefono_whatsapp || '').toLowerCase()
+
+      if (nom.includes(q) || ced.includes(q) || email.includes(q)) return true
+      if ((q.length >= 4 || q.startsWith('+') || q.startsWith('0')) && tel.includes(q)) return true
+
+      const aptos = getApartamentosUsuario(u.id)
+      return aptos.some((a) => {
+        const aptoNum = String(a.numero_apto || '').toLowerCase()
+        const aptoSinGuion = aptoNum.replace(/[^a-z0-9]/g, '')
+        const piso = String(a.piso || '').toLowerCase()
+
+        if (aptoNum.includes(q) || (qSinGuion && aptoSinGuion.includes(qSinGuion))) return true
+        if (`apto ${aptoNum}`.includes(q)) return true
+        if (
+          piso === q ||
+          `piso ${piso}`.includes(q) ||
+          (q === 'pb' && (piso === '0' || piso.includes('pb'))) ||
+          (q === 'ph' && (piso === 'ph' || piso.includes('ph'))) ||
+          (q.includes('penthouse') && piso.includes('ph'))
+        ) return true
+
+        return false
+      })
+    })
+  }
+
+  return lista
 })
 
 onMounted(async () => {

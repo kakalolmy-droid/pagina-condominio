@@ -30,13 +30,29 @@
 
     <!-- Barra de acciones y búsqueda -->
     <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
-      <div class="w-full md:w-80">
-        <input
-          v-model="busqueda"
-          type="text"
-          placeholder="Buscar por número de apto o piso..."
-          class="input-neu text-sm"
-        />
+      <div class="flex items-center gap-3 w-full md:w-auto flex-wrap">
+        <div class="w-full sm:w-72">
+          <input
+            v-model="busqueda"
+            type="text"
+            placeholder="Buscar por apto, piso o persona..."
+            class="input-neu text-sm"
+          />
+        </div>
+
+        <!-- Filtro por Pisos del Edificio (PB al 16 y PH) -->
+        <select
+          v-model="filtroPiso"
+          class="input-neu text-xs py-3 px-3 min-w-[150px] cursor-pointer"
+          title="Filtrar apartamentos por piso"
+        >
+          <option value="todos">🏢 Todos los Pisos</option>
+          <option value="PB">Planta Baja (PB)</option>
+          <option v-for="p in 16" :key="p" :value="String(p)">
+            Piso {{ p }}
+          </option>
+          <option value="PH">Penthouse (PH)</option>
+        </select>
       </div>
 
       <div class="flex items-center gap-2.5 flex-wrap w-full md:w-auto justify-end">
@@ -265,6 +281,7 @@ const aptosStore = useApartamentosStore()
 const usuariosStore = useUsuariosStore()
 
 const busqueda = ref('')
+const filtroPiso = ref('todos')
 const modalAbierto = ref(false)
 const editandoId = ref(null)
 const guardando = ref(false)
@@ -312,20 +329,81 @@ function formatPiso(p) {
   return `Piso ${val}`
 }
 
+function getPisoVal(item) {
+  const p = String(item.piso || '').trim().toUpperCase()
+  if (p.includes('PB') || p === '0') return 0
+  if (p.includes('PH') || p.includes('PENTHOUSE')) return 99
+  const parsedP = parseInt(p, 10)
+  if (!isNaN(parsedP)) return parsedP
+
+  const num = String(item.numero_apto || '').trim().toUpperCase()
+  if (num.includes('PB')) return 0
+  if (num.includes('PH') || num.includes('PENTHOUSE')) return 99
+  const match = num.match(/^(\d+)/)
+  if (match) return parseInt(match[1], 10)
+  return 999
+}
+
+function getAptoSubVal(item) {
+  const num = String(item.numero_apto || '').trim().toUpperCase()
+  if (num.includes('-')) {
+    const parts = num.split('-')
+    const sub = parseInt(parts[1], 10)
+    return isNaN(sub) ? parts[1] : sub
+  }
+  return num
+}
+
 const aptosFiltrados = computed(() => {
-  const lista = aptosStore.lista || []
-  if (!busqueda.value) return lista
-  const q = busqueda.value.toLowerCase().trim()
-  return lista.filter(
-    (a) =>
-      a.numero_apto.toLowerCase().includes(q) ||
-      (a.piso && (
-        a.piso.toString().toLowerCase() === q ||
-        `piso ${a.piso}`.toLowerCase().includes(q) ||
-        (q === 'ph' && a.piso.toString().toLowerCase().includes('ph')) ||
-        (q.includes('penthouse') && a.piso.toString().toLowerCase().includes('ph'))
-      ))
-  )
+  let lista = aptosStore.lista || []
+
+  // Filtro por Piso (PB al 16 y PH)
+  if (filtroPiso.value !== 'todos') {
+    const target = filtroPiso.value.trim().toUpperCase()
+    lista = lista.filter((a) => {
+      const p = String(a.piso || '').trim().toUpperCase()
+      if (target === 'PB') return p === 'PB' || p === '0'
+      if (target === 'PH') return p === 'PH' || p.includes('PH') || p.includes('PENTHOUSE')
+      return p === target
+    })
+  }
+
+  // Buscador de texto (apto, piso, persona propietaria)
+  if (busqueda.value.trim()) {
+    const q = busqueda.value.toLowerCase().trim()
+    const qSinGuion = q.replace(/[^a-z0-9]/g, '')
+    lista = lista.filter((a) => {
+      const aptoNum = String(a.numero_apto || '').toLowerCase()
+      const aptoSinGuion = aptoNum.replace(/[^a-z0-9]/g, '')
+      const piso = String(a.piso || '').toLowerCase()
+      const prop = a.propietario ? `${a.propietario.nombre || ''} ${a.propietario.apellido || ''}`.toLowerCase() : ''
+
+      if (aptoNum.includes(q) || (qSinGuion && aptoSinGuion.includes(qSinGuion))) return true
+      if (`apto ${aptoNum}`.includes(q)) return true
+      if (prop.includes(q)) return true
+      if (
+        piso === q ||
+        `piso ${piso}`.includes(q) ||
+        (q === 'pb' && (piso === '0' || piso.includes('pb'))) ||
+        (q === 'ph' && (piso === 'ph' || piso.includes('ph'))) ||
+        (q.includes('penthouse') && piso.includes('ph'))
+      ) return true
+
+      return false
+    })
+  }
+
+  // Ordenamiento natural de PB al 16 y PH
+  return [...lista].sort((a, b) => {
+    const pisoDiff = getPisoVal(a) - getPisoVal(b)
+    if (pisoDiff !== 0) return pisoDiff
+    const subA = getAptoSubVal(a)
+    const subB = getAptoSubVal(b)
+    if (typeof subA === 'number' && typeof subB === 'number') {
+      return subA - subB
+    }
+    return String(subA).localeCompare(String(subB))
+  })
 })
 
 const aptosActivos = computed(() => {
