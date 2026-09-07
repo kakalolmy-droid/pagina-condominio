@@ -74,7 +74,7 @@
               class="border-b border-neu-bg-dark hover:bg-neu-bg-dark/50 transition-colors"
             >
               <td class="py-3 font-bold text-neu-green">{{ item.numero_apto }}</td>
-              <td class="py-3 text-neu-text font-medium">Piso {{ item.piso || 'PB' }}</td>
+              <td class="py-3 text-neu-text font-medium">{{ formatPiso(item.piso) }}</td>
               <td class="py-3 font-semibold text-neu-text">{{ item.propietario }}</td>
               <td class="py-3 text-neu-text">
                 <a
@@ -145,6 +145,14 @@ const matriz = computed(() => aptosStore.matrizDeudas || [])
 const conteoMorosos = computed(() => matriz.value.filter((a) => a.estado === 'moroso').length)
 const conteoSolventes = computed(() => matriz.value.filter((a) => a.estado === 'solvente').length)
 
+function formatPiso(p) {
+  if (!p) return 'PB'
+  const val = String(p).trim().toUpperCase()
+  if (val === 'PB' || val === '0') return 'PB'
+  if (val === 'PH' || val.includes('PENTHOUSE')) return 'PH'
+  return `Piso ${val}`
+}
+
 const matrizFiltrada = computed(() => {
   let lista = matriz.value
   if (filtroEstado.value) {
@@ -156,7 +164,12 @@ const matrizFiltrada = computed(() => {
       (a) =>
         a.numero_apto.toLowerCase().includes(q) ||
         a.propietario.toLowerCase().includes(q) ||
-        (a.piso && (a.piso.toString().toLowerCase() === q || `piso ${a.piso}`.toLowerCase().includes(q)))
+        (a.piso && (
+          a.piso.toString().toLowerCase() === q ||
+          `piso ${a.piso}`.toLowerCase().includes(q) ||
+          (q === 'ph' && a.piso.toString().toLowerCase().includes('ph')) ||
+          (q.includes('penthouse') && a.piso.toString().toLowerCase().includes('ph'))
+        ))
     )
   }
   return lista

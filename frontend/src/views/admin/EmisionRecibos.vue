@@ -44,7 +44,7 @@
           />
         </div>
 
-        <!-- Filtro por Pisos del Edificio (PB al Piso 16) -->
+        <!-- Filtro por Pisos del Edificio (PB al Piso 16 y PH) -->
         <select
           v-model="filtroPiso"
           class="input-neu text-xs py-2.5 px-3 min-w-[140px] cursor-pointer"
@@ -55,6 +55,7 @@
           <option v-for="p in pisosDisponibles" :key="p" :value="p">
             Piso {{ p }}
           </option>
+          <option value="PH">Penthouse (PH)</option>
         </select>
 
         <select
@@ -126,7 +127,7 @@
                       🏢 Apto {{ apto.numero_apto }}
                     </span>
                     <span class="text-xs text-neu-text-light font-medium whitespace-nowrap">
-                      Piso {{ apto.piso || 'PB' }}
+                      {{ formatPiso(apto.piso) }}
                     </span>
                   </div>
                 </td>
@@ -606,18 +607,28 @@ onMounted(async () => {
   ])
 })
 
-// ── ORDENAMIENTO NATURAL DE APARTAMENTOS: DE PB AL 16 ──
+// ── ORDENAMIENTO NATURAL DE APARTAMENTOS: DE PB AL 16 Y PH ──
 function getPisoVal(item) {
   const p = String(item.piso || '').trim().toUpperCase()
   if (p.includes('PB') || p === '0') return 0
+  if (p.includes('PH') || p.includes('PENTHOUSE')) return 99
   const parsedP = parseInt(p, 10)
   if (!isNaN(parsedP)) return parsedP
 
   const num = String(item.numero_apto || '').trim().toUpperCase()
   if (num.includes('PB')) return 0
+  if (num.includes('PH') || num.includes('PENTHOUSE')) return 99
   const match = num.match(/^(\d+)/)
   if (match) return parseInt(match[1], 10)
   return 999
+}
+
+function formatPiso(p) {
+  if (!p) return 'PB'
+  const val = String(p).trim().toUpperCase()
+  if (val === 'PB' || val === '0') return 'PB'
+  if (val === 'PH' || val.includes('PENTHOUSE')) return 'PH'
+  return `Piso ${val}`
 }
 
 function getAptoSubVal(item) {
@@ -700,12 +711,13 @@ const apartamentosFiltrados = computed(() => {
     lista = lista.filter((a) => !a.esSolvente)
   }
 
-  // Filtro por Piso (PB al 16)
+  // Filtro por Piso (PB al 16 y PH)
   if (filtroPiso.value !== 'todos') {
     const target = filtroPiso.value.trim().toUpperCase()
     lista = lista.filter((a) => {
       const p = String(a.piso || '').trim().toUpperCase()
       if (target === 'PB') return p === 'PB' || p === '0'
+      if (target === 'PH') return p === 'PH' || p.includes('PH') || p.includes('PENTHOUSE')
       return p === target
     })
   }
@@ -728,7 +740,13 @@ const apartamentosFiltrados = computed(() => {
       if (`apto ${aptoNum}`.includes(term)) return true
 
       // Coincidencia con piso
-      if (piso === term || `piso ${piso}`.includes(term) || (term === 'pb' && (piso === '0' || piso.includes('pb')))) return true
+      if (
+        piso === term ||
+        `piso ${piso}`.includes(term) ||
+        (term === 'pb' && (piso === '0' || piso.includes('pb'))) ||
+        (term === 'ph' && (piso === 'ph' || piso.includes('ph'))) ||
+        (term.includes('penthouse') && piso.includes('ph'))
+      ) return true
 
       // Coincidencia con persona, email o cédula
       if (nom.includes(term) || email.includes(term) || cedula.includes(term)) return true
@@ -748,7 +766,7 @@ const recibosFiltradosGeneral = computed(() => {
     lista = lista.filter((r) => r.estado_pago === filtroEstadoRecibo.value)
   }
 
-  // Filtro por Piso en recibos
+  // Filtro por Piso en recibos (PB al 16 y PH)
   if (filtroPiso.value !== 'todos') {
     const target = filtroPiso.value.trim().toUpperCase()
     lista = lista.filter((r) => {
@@ -756,6 +774,7 @@ const recibosFiltradosGeneral = computed(() => {
       if (!apto) return false
       const p = String(apto.piso || '').trim().toUpperCase()
       if (target === 'PB') return p === 'PB' || p === '0'
+      if (target === 'PH') return p === 'PH' || p.includes('PH') || p.includes('PENTHOUSE')
       return p === target
     })
   }
@@ -774,7 +793,13 @@ const recibosFiltradosGeneral = computed(() => {
 
       if (aptoNum.includes(term) || (termSinGuion && aptoNumSinGuion.includes(termSinGuion))) return true
       if (`apto ${aptoNum}`.includes(term)) return true
-      if (piso === term || `piso ${piso}`.includes(term) || (term === 'pb' && (piso === '0' || piso.includes('pb')))) return true
+      if (
+        piso === term ||
+        `piso ${piso}`.includes(term) ||
+        (term === 'pb' && (piso === '0' || piso.includes('pb'))) ||
+        (term === 'ph' && (piso === 'ph' || piso.includes('ph'))) ||
+        (term.includes('penthouse') && piso.includes('ph'))
+      ) return true
       if (nom.includes(term) || per.includes(term)) return true
       if ((term.length >= 4 || term.startsWith('+') || term.startsWith('0')) && tel.includes(term)) return true
 

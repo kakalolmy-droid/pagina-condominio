@@ -11,7 +11,7 @@
             </div>
             <p class="text-xs text-neu-text-light mt-1">
               Inmueble: <span class="font-semibold text-neu-text">Apto {{ aptoInfo.numero_apto || 'Cargando...' }}</span>
-              <span v-if="aptoInfo.piso"> | Piso: {{ aptoInfo.piso }}</span>
+              <span v-if="aptoInfo.piso"> | {{ formatPiso(aptoInfo.piso) }}</span>
               <span v-if="aptoInfo.alicuota"> | Alícuota: {{ (parseFloat(aptoInfo.alicuota) * 100).toFixed(2) }}%</span>
             </p>
           </div>
@@ -319,6 +319,14 @@ async function cargarApartamento() {
 
 const modalComprobanteAbierto = ref(false)
 const comprobanteUrlActual = ref('')
+
+function formatPiso(p) {
+  if (!p) return 'PB'
+  const val = String(p).trim().toUpperCase()
+  if (val === 'PB' || val === '0') return 'PB'
+  if (val === 'PH' || val.includes('PENTHOUSE')) return 'PH'
+  return `Piso ${val}`
+}
 
 function esPdf(url) {
   return url && (url.startsWith('data:application/pdf') || url.toLowerCase().includes('.pdf'))

@@ -96,7 +96,7 @@
               <td class="py-3 font-bold text-neu-green">
                 Apto {{ apto.numero_apto }}
               </td>
-              <td class="py-3 text-neu-text">Piso {{ apto.piso || 'PB' }}</td>
+              <td class="py-3 text-neu-text font-medium">{{ formatPiso(apto.piso) }}</td>
               <td class="py-3 font-semibold text-neu-text">
                 ${{ parseFloat(apto.alicuota || 15).toFixed(2) }} USD
               </td>
@@ -174,12 +174,23 @@
             placeholder="Ej. 2-5"
             required
           />
-          <NeuInput
-            id="piso"
-            label="Piso"
-            v-model="form.piso"
-            placeholder="Ej. 2 (o PB)"
-          />
+          <div class="flex flex-col gap-1">
+            <label for="piso" class="text-sm font-medium text-neu-text-light">
+              Piso / Nivel
+            </label>
+            <select
+              id="piso"
+              v-model="form.piso"
+              class="input-neu cursor-pointer font-medium text-neu-text"
+            >
+              <option value="" disabled>Selecciona el piso...</option>
+              <option value="PB">Planta Baja (PB)</option>
+              <option v-for="n in 16" :key="n" :value="String(n)">
+                Piso {{ n }}
+              </option>
+              <option value="PH">Penthouse (PH)</option>
+            </select>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -293,6 +304,14 @@ function estaInactivo(aptoId, propId) {
   return inactivosAptosIds.value.has(aptoId) || (propId && inactivosUsersIds.value.has(propId))
 }
 
+function formatPiso(p) {
+  if (!p) return 'PB'
+  const val = String(p).trim().toUpperCase()
+  if (val === 'PB' || val === '0') return 'PB'
+  if (val === 'PH' || val.includes('PENTHOUSE')) return 'PH'
+  return `Piso ${val}`
+}
+
 const aptosFiltrados = computed(() => {
   const lista = aptosStore.lista || []
   if (!busqueda.value) return lista
@@ -300,7 +319,12 @@ const aptosFiltrados = computed(() => {
   return lista.filter(
     (a) =>
       a.numero_apto.toLowerCase().includes(q) ||
-      (a.piso && (a.piso.toString().toLowerCase() === q || `piso ${a.piso}`.toLowerCase().includes(q)))
+      (a.piso && (
+        a.piso.toString().toLowerCase() === q ||
+        `piso ${a.piso}`.toLowerCase().includes(q) ||
+        (q === 'ph' && a.piso.toString().toLowerCase().includes('ph')) ||
+        (q.includes('penthouse') && a.piso.toString().toLowerCase().includes('ph'))
+      ))
   )
 })
 

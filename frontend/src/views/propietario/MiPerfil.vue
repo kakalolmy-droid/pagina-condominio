@@ -168,7 +168,7 @@
                 <div class="p-2.5 rounded-neu-sm bg-neu-bg-dark border border-neu-shadow-dark flex items-center justify-between">
                   <div>
                     <span class="text-[9px] font-bold text-neu-text-light uppercase tracking-wider block">Piso</span>
-                    <span class="text-xs font-bold text-neu-text">Piso {{ apartamento.piso || 'PB' }}</span>
+                    <span class="text-xs font-bold text-neu-text">{{ formatPiso(apartamento.piso) }}</span>
                   </div>
                   <span class="text-xs text-neu-text-light">🔒</span>
                 </div>
@@ -271,6 +271,14 @@ function formatAlicuota(val) {
   if (!val) return '0.00'
   const num = parseFloat(val)
   return num < 1 ? (num * 100).toFixed(2) : num.toFixed(2)
+}
+
+function formatPiso(p) {
+  if (!p) return 'PB'
+  const val = String(p).trim().toUpperCase()
+  if (val === 'PB' || val === '0') return 'PB'
+  if (val === 'PH' || val.includes('PENTHOUSE')) return 'PH'
+  return `Piso ${val}`
 }
 
 async function guardarDatosPersonales() {

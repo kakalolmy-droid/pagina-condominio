@@ -153,12 +153,24 @@
                 placeholder="Ej. 2-5"
                 required
               />
-              <NeuInput
-                id="reg_piso"
-                label="Piso"
-                v-model="formRegistro.piso"
-                placeholder="Ej. 2 (o PB)"
-              />
+              <div class="flex flex-col gap-1">
+                <label for="reg_piso" class="text-sm font-medium text-neu-text-light">
+                  Piso <span class="text-neu-green font-bold">*</span>
+                </label>
+                <select
+                  id="reg_piso"
+                  v-model="formRegistro.piso"
+                  class="input-neu cursor-pointer font-medium text-neu-text"
+                  required
+                >
+                  <option value="" disabled>Selecciona el piso...</option>
+                  <option value="PB">Planta Baja (PB)</option>
+                  <option v-for="n in 16" :key="n" :value="String(n)">
+                    Piso {{ n }}
+                  </option>
+                  <option value="PH">Penthouse (PH)</option>
+                </select>
+              </div>
             </div>
 
             <!-- Fila 4: Correo y Contraseña -->
@@ -364,7 +376,7 @@ const formRegistro = ref({
   cedula: '',
   telefono_whatsapp: '',
   numero_apto: '',
-  piso: '1',
+  piso: '',
   torre: 'Principal',
   email: '',
   password: '',
@@ -423,6 +435,10 @@ async function handleRegistro() {
   }
   if (!formRegistro.value.numero_apto) {
     errorGeneral.value = 'Por favor indica el número de tu apartamento.'
+    return
+  }
+  if (!formRegistro.value.piso) {
+    errorGeneral.value = 'Por favor selecciona el piso de tu apartamento (PB al 16 o PH).'
     return
   }
   if (!formRegistro.value.email || !formRegistro.value.password) {
