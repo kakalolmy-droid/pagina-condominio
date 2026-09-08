@@ -13,6 +13,9 @@ export const recibosService = {
   emitirMasivo: (data) =>
     api.post('/recibos/emitir-masivo', data),
 
+  crearIndividual: (data) =>
+    api.post('/recibos/crear-individual', data),
+
   eliminar: (id) =>
     api.delete(`/recibos/${id}`),
 }

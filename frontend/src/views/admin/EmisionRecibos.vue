@@ -246,6 +246,42 @@
           </div>
         </div>
 
+        <!-- Barra de Acciones del Expediente -->
+        <div class="flex items-center justify-between gap-2.5 flex-wrap p-3 bg-neu-bg rounded-neu-sm border border-white/60 shadow-neu-sm">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-extrabold text-neu-green flex items-center gap-1.5">
+              <span>📋</span> Recibos Emitidos ({{ aptoSeleccionado.recibos?.length || 0 }})
+            </span>
+            <span v-if="aptoSeleccionado.totalPendientes > 0" class="text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+              {{ aptoSeleccionado.totalPendientes }} mes(es) pendiente(s)
+            </span>
+            <span v-else class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              Al día
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              @click="abrirModalEmitirMes"
+              class="px-3 py-1.5 rounded-neu-sm bg-neu-bg shadow-neu-sm hover:shadow-neu text-xs font-bold text-neu-text hover:text-neu-green border border-white/60 flex items-center gap-1.5 cursor-pointer transition-all"
+              title="Emitir un mes de condominio a este apartamento"
+            >
+              <span>➕</span>
+              <span>Agregar Mes</span>
+            </button>
+            <button
+              type="button"
+              @click="abrirModalPagoManualGeneral"
+              class="px-3.5 py-1.5 rounded-neu-sm bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-md flex items-center gap-1.5 cursor-pointer transition-all"
+              title="Anotar y cargar el pago de un mes de condominio"
+            >
+              <span>💳</span>
+              <span>Cargar Pago Manualmente</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Tabla de todos los recibos mensuales de este residente -->
         <div class="overflow-x-auto max-h-[55vh]">
           <table class="w-full text-left border-collapse text-xs sm:text-sm">
@@ -256,7 +292,8 @@
                 <th class="py-2.5 px-3 font-bold text-center whitespace-nowrap">Pendiente</th>
                 <th class="py-2.5 px-3 font-bold text-center whitespace-nowrap">Vencimiento</th>
                 <th class="py-2.5 px-3 font-bold text-center whitespace-nowrap">Estado</th>
-                <th class="py-2.5 px-3 font-bold text-center whitespace-nowrap">Comprobante de Pago</th>
+                <th class="py-2.5 px-3 font-bold text-center whitespace-nowrap">Comprobante</th>
+                <th class="py-2.5 px-3 font-bold text-center whitespace-nowrap">Anotar / Marcar Pago</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-neu-bg-dark">
@@ -298,10 +335,10 @@
                     <button
                       type="button"
                       @click="verFotoComprobante(recibo)"
-                      class="px-3 py-1.5 rounded-neu-sm bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
+                      class="px-3 py-1.5 rounded-neu-sm bg-neu-bg shadow-neu-sm hover:shadow-neu-inset text-neu-green border border-white/60 font-bold text-xs transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
                     >
                       <span>📷</span>
-                      <span>Ver Foto Captura</span>
+                      <span>Ver Captura</span>
                     </button>
                     <span v-if="recibo.ultimo_pago_referencia" class="text-[10px] text-neu-text-light font-mono font-bold">
                       Ref: {{ recibo.ultimo_pago_referencia }}
@@ -311,10 +348,33 @@
                     Sin comprobante
                   </div>
                 </td>
+
+                <!-- Anotar / Marcar Pago de este mes -->
+                <td class="py-3 px-3 align-middle text-center whitespace-nowrap">
+                  <div class="flex items-center justify-center">
+                    <button
+                      v-if="recibo.estado_pago !== 'pagado'"
+                      type="button"
+                      @click="abrirModalPagoManualParaRecibo(recibo)"
+                      class="px-3.5 py-1.5 rounded-neu-sm bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-sm transition-all cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap"
+                      title="Anotar pago y marcar que este mes fue pagado"
+                    >
+                      <span>💳</span>
+                      <span>Marcar Pagado</span>
+                    </button>
+                    <span
+                      v-else
+                      class="inline-flex items-center gap-1 text-emerald-700 font-extrabold text-xs bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200"
+                    >
+                      <span>✓</span>
+                      <span>Pagado</span>
+                    </span>
+                  </div>
+                </td>
               </tr>
 
               <tr v-if="!aptoSeleccionado.recibos || aptoSeleccionado.recibos.length === 0">
-                <td colspan="6" class="py-10 text-center text-neu-text-light">
+                <td colspan="7" class="py-10 text-center text-neu-text-light">
                   <div class="flex flex-col items-center justify-center gap-2">
                     <span class="text-2xl">📂</span>
                     <p class="text-sm">No hay recibos generados aún para este apartamento.</p>
@@ -397,6 +457,209 @@
         </div>
       </div>
     </NeuModal>
+
+    <!-- ──────────────── MODAL 3: ANOTAR Y CARGAR PAGO MANUAL (ADMINISTRADOR) ──────────────── -->
+    <NeuModal
+      v-model="modalPagoManualAbierto"
+      :title="aptoSeleccionado ? `Anotar Pago — Apto ${aptoSeleccionado.numero_apto}` : 'Anotar Pago Manual'"
+      size="2xl"
+    >
+      <form v-if="aptoSeleccionado" @submit.prevent="guardarPagoManual" class="flex flex-col gap-4">
+        <!-- Banner del Apartamento y Persona -->
+        <div class="p-3 bg-neu-bg-dark rounded-neu-sm border border-neu-shadow-dark flex justify-between items-center text-xs">
+          <div>
+            <span class="text-[10px] text-neu-text-light uppercase font-bold block">Inmueble y Residente</span>
+            <strong class="text-neu-text text-sm">🏢 Apto {{ aptoSeleccionado.numero_apto }}</strong>
+            <span class="text-neu-text-light ml-2">({{ aptoSeleccionado.habitanteNombre }})</span>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] text-neu-text-light uppercase font-bold block">Cuota Mensual</span>
+            <span class="font-extrabold text-neu-green text-sm">{{ formatUSD(aptoSeleccionado.alicuota || 15) }}</span>
+          </div>
+        </div>
+
+        <!-- Selector del Mes / Recibo a Pagar -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-neu-text">Mes / Período a Pagar *</label>
+          <select v-model="formPago.recibo_id" @change="actualizarMontoPorRecibo" class="input-neu text-xs py-2.5 px-3 cursor-pointer" required>
+            <option :value="null" disabled>Selecciona el mes que está pagando...</option>
+            <option
+              v-for="r in recibosDisponiblesParaPago"
+              :key="r.id"
+              :value="r.id"
+            >
+              {{ formatPeriodo(r.mes_periodo) }} — Pendiente: {{ formatUSD(r.monto_pendiente_usd) }} (Cuota: {{ formatUSD(r.monto_total_usd) }})
+            </option>
+          </select>
+          <span v-if="recibosDisponiblesParaPago.length === 0" class="text-[11px] text-amber-700 italic mt-0.5">
+            ⚠️ No hay meses pendientes. Si vas a cobrar un mes nuevo, usa el botón "Agregar Mes" primero.
+          </span>
+        </div>
+
+        <!-- Monto y Moneda -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold text-neu-text">Monto Pagado *</label>
+            <input
+              v-model.number="formPago.monto"
+              type="number"
+              step="0.01"
+              min="0.01"
+              class="input-neu text-xs py-2.5 px-3 font-extrabold text-neu-green"
+              required
+            />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold text-neu-text">Moneda del Pago *</label>
+            <select v-model="formPago.moneda" class="input-neu text-xs py-2.5 px-3 cursor-pointer" required>
+              <option value="USD">Dólares ($ USD)</option>
+              <option value="VES">Bolívares (Bs. VES)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Equivalencia en vivo Tasa BCV -->
+        <div v-if="tasaStore.tasaActual" class="p-2.5 bg-neu-bg rounded-neu-sm border border-white/60 text-xs flex justify-between items-center text-neu-text-light shadow-neu-sm">
+          <span>Tasa BCV Oficial: <strong>Bs. {{ parseFloat(tasaStore.tasaActual).toFixed(2) }}</strong></span>
+          <span class="font-bold text-neu-green">
+            Equivalente: 
+            <strong v-if="formPago.moneda === 'USD'">{{ formatVES(formPago.monto * parseFloat(tasaStore.tasaActual)) }}</strong>
+            <strong v-else>{{ formatUSD(formPago.monto / parseFloat(tasaStore.tasaActual)) }}</strong>
+          </span>
+        </div>
+
+        <!-- Método de Pago y Banco -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold text-neu-text">Método de Pago Recibido *</label>
+            <select v-model="formPago.metodo_pago" class="input-neu text-xs py-2.5 px-3 cursor-pointer" required>
+              <option value="efectivo_usd">💵 Efectivo en Dólares ($ USD)</option>
+              <option value="pago_movil">📱 Pago Móvil (Bs. VES)</option>
+              <option value="transferencia_ves">🏦 Transferencia Bancaria (Bs. VES)</option>
+              <option value="zelle">💳 Zelle ($ USD)</option>
+              <option value="efectivo_ves">💵 Efectivo en Bolívares (Bs. VES)</option>
+              <option value="otro">📝 Otro / Depósito</option>
+            </select>
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold text-neu-text">Banco de Origen (Opcional)</label>
+            <input
+              v-model="formPago.banco_origen"
+              type="text"
+              placeholder="Ej: Banesco, Mercantil, BDV, Efectivo..."
+              class="input-neu text-xs py-2.5 px-3"
+            />
+          </div>
+        </div>
+
+        <!-- Referencia / Nota de Administración -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-neu-text">N° Referencia o Nota de Administración *</label>
+          <input
+            v-model="formPago.referencia"
+            type="text"
+            placeholder="Ej: Entregado en efectivo en conserjería, Ref: 123456..."
+            class="input-neu text-xs py-2.5 px-3"
+            required
+          />
+        </div>
+
+        <!-- Foto del comprobante opcional -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-neu-text">Foto del Comprobante o Recibo en Papel (Opcional)</label>
+          <input
+            type="file"
+            accept="image/*,application/pdf"
+            @change="seleccionarArchivoPago"
+            class="text-xs text-neu-text file:mr-3 file:py-1.5 file:px-3 file:rounded-neu-sm file:border-0 file:text-xs file:font-bold file:bg-neu-bg file:shadow-neu-sm file:text-neu-green cursor-pointer"
+          />
+          <span class="text-[10px] text-neu-text-light mt-0.5">
+            Si tienes foto de la transferencia o recibo firmado puedes adjuntarla, si no, déjalo vacío.
+          </span>
+        </div>
+
+        <!-- Checkbox Marcar Pagado -->
+        <div class="flex items-center gap-2 p-2.5 bg-emerald-50 rounded-neu-sm border border-emerald-200 text-xs">
+          <input
+            id="chkMarcarPagado"
+            v-model="formPago.marcar_aprobado"
+            type="checkbox"
+            class="w-4 h-4 text-emerald-600 rounded cursor-pointer"
+          />
+          <label for="chkMarcarPagado" class="font-bold text-emerald-900 cursor-pointer">
+            Marcar inmediatamente como Pagado y Solvente (actualiza la deuda del apartamento al instante)
+          </label>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="flex justify-end gap-3 pt-3 border-t border-neu-shadow-dark">
+          <NeuButton type="button" @click="modalPagoManualAbierto = false">
+            Cancelar
+          </NeuButton>
+          <button
+            type="submit"
+            :disabled="guardandoPago || !formPago.recibo_id"
+            class="px-5 py-2.5 rounded-neu-sm bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <span>💾</span>
+            <span>{{ guardandoPago ? 'Guardando Pago...' : 'Confirmar y Marcar Pagado' }}</span>
+          </button>
+        </div>
+      </form>
+    </NeuModal>
+
+    <!-- ──────────────── MODAL 4: EMITIR / AGREGAR MES MANUALMENTE ──────────────── -->
+    <NeuModal
+      v-model="modalEmitirMesAbierto"
+      :title="aptoSeleccionado ? `Emitir Mes de Condominio — Apto ${aptoSeleccionado.numero_apto}` : 'Emitir Mes'"
+      size="md"
+    >
+      <form v-if="aptoSeleccionado" @submit.prevent="guardarMesIndividual" class="flex flex-col gap-4">
+        <div class="p-3 bg-neu-bg-dark rounded-neu-sm text-xs border border-neu-shadow-dark">
+          <span class="text-neu-text-light block">Apartamento:</span>
+          <strong class="text-sm text-neu-text">🏢 Apto {{ aptoSeleccionado.numero_apto }} — {{ aptoSeleccionado.habitanteNombre }}</strong>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-neu-text">Mes / Período a Emitir *</label>
+          <input
+            v-model="formMesIndividual.periodo"
+            type="month"
+            class="input-neu text-xs py-2.5 px-3"
+            required
+          />
+          <span class="text-[10px] text-neu-text-light">Selecciona el mes que deseas agregar (ej. 2026-09, 2026-10).</span>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-neu-text">Monto de la Cuota ($ USD) *</label>
+          <input
+            v-model.number="formMesIndividual.monto_usd"
+            type="number"
+            step="0.01"
+            min="0.01"
+            class="input-neu text-xs py-2.5 px-3 font-extrabold"
+            required
+          />
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-neu-shadow-dark">
+          <NeuButton type="button" @click="modalEmitirMesAbierto = false">
+            Cancelar
+          </NeuButton>
+          <button
+            type="submit"
+            :disabled="guardandoMes"
+            class="px-4 py-2 rounded-neu-sm bg-neu-green hover:bg-neu-green-dark text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+          >
+            <span>➕</span>
+            <span>{{ guardandoMes ? 'Emitiendo...' : 'Emitir Recibo de Mes' }}</span>
+          </button>
+        </div>
+      </form>
+    </NeuModal>
   </AdminLayout>
 </template>
 
@@ -407,6 +670,7 @@ import { AdminLayout } from '@/components/layout'
 import { NeuCard, NeuButton, NeuModal } from '@/components/neumorph'
 import { EstadoPagoBadge } from '@/components/shared'
 import { useRecibosStore, useApartamentosStore, useTasaStore, useUsuariosStore } from '@/stores'
+import { pagosService, recibosService } from '@/services'
 import { formatUSD, formatVES, formatFecha, formatPeriodo } from '@/utils'
 
 const toast = useToast()
@@ -426,6 +690,28 @@ const aptoSeleccionado = ref(null)
 
 const modalFotoComprobanteAbierto = ref(false)
 const reciboParaComprobante = ref(null)
+
+// ── ESTADO PARA CARGAR PAGO MANUALMENTE (ADMINISTRADOR) ──
+const modalPagoManualAbierto = ref(false)
+const guardandoPago = ref(false)
+const archivoPagoManual = ref(null)
+const formPago = ref({
+  recibo_id: null,
+  monto: 15.00,
+  moneda: 'USD',
+  metodo_pago: 'efectivo_usd',
+  referencia: 'Pago presencial entregado a administración',
+  banco_origen: 'Efectivo en mano',
+  marcar_aprobado: true,
+})
+
+// ── ESTADO PARA EMITIR MES MANUALMENTE (ADMINISTRADOR) ──
+const modalEmitirMesAbierto = ref(false)
+const guardandoMes = ref(false)
+const formMesIndividual = ref({
+  periodo: new Date().toISOString().slice(0, 7),
+  monto_usd: 15.00,
+})
 
 onMounted(async () => {
   await Promise.all([
@@ -617,5 +903,142 @@ function esPdf(url) {
 function verFotoComprobante(recibo) {
   reciboParaComprobante.value = recibo
   modalFotoComprobanteAbierto.value = true
+}
+
+// ── LÓGICA DE CARGA Y ANOTACIÓN DE PAGO MANUAL ──
+const recibosDisponiblesParaPago = computed(() => {
+  if (!aptoSeleccionado.value || !aptoSeleccionado.value.recibos) return []
+  const pend = aptoSeleccionado.value.recibos.filter((r) => r.estado_pago !== 'pagado')
+  return pend.length > 0 ? pend : aptoSeleccionado.value.recibos
+})
+
+function actualizarMontoPorRecibo() {
+  if (!aptoSeleccionado.value || !formPago.value.recibo_id) return
+  const r = aptoSeleccionado.value.recibos?.find((rec) => rec.id === formPago.value.recibo_id)
+  if (r) {
+    const pend = parseFloat(r.monto_pendiente_usd)
+    formPago.value.monto = pend > 0 ? pend : (parseFloat(r.monto_total_usd) || 15.00)
+  }
+}
+
+function abrirModalPagoManualParaRecibo(recibo) {
+  formPago.value.recibo_id = recibo.id
+  const pend = parseFloat(recibo.monto_pendiente_usd)
+  formPago.value.monto = pend > 0 ? pend : (parseFloat(recibo.monto_total_usd) || 15.00)
+  formPago.value.moneda = 'USD'
+  formPago.value.metodo_pago = 'efectivo_usd'
+  formPago.value.referencia = 'Pago presencial verificado por administración'
+  formPago.value.banco_origen = 'Efectivo en mano'
+  formPago.value.marcar_aprobado = true
+  archivoPagoManual.value = null
+  modalPagoManualAbierto.value = true
+}
+
+function abrirModalPagoManualGeneral() {
+  const disponibles = recibosDisponiblesParaPago.value
+  formPago.value.recibo_id = disponibles.length > 0 ? disponibles[0].id : null
+  const primerMonto = disponibles.length > 0
+    ? (parseFloat(disponibles[0].monto_pendiente_usd) || parseFloat(disponibles[0].monto_total_usd) || 15.00)
+    : (parseFloat(aptoSeleccionado.value?.alicuota) || 15.00)
+  formPago.value.monto = primerMonto
+  formPago.value.moneda = 'USD'
+  formPago.value.metodo_pago = 'efectivo_usd'
+  formPago.value.referencia = 'Pago presencial verificado por administración'
+  formPago.value.banco_origen = 'Efectivo en mano'
+  formPago.value.marcar_aprobado = true
+  archivoPagoManual.value = null
+  modalPagoManualAbierto.value = true
+}
+
+function seleccionarArchivoPago(e) {
+  const file = e.target.files?.[0]
+  if (file) {
+    archivoPagoManual.value = file
+  }
+}
+
+async function guardarPagoManual() {
+  if (!formPago.value.recibo_id) {
+    toast.warning('Por favor selecciona el mes a pagar.')
+    return
+  }
+  if (!formPago.value.monto || formPago.value.monto <= 0) {
+    toast.warning('Ingresa un monto válido mayor a cero.')
+    return
+  }
+
+  guardandoPago.value = true
+  try {
+    const fd = new FormData()
+    fd.append('recibo_id', String(formPago.value.recibo_id))
+    fd.append('metodo_pago', formPago.value.metodo_pago)
+    fd.append('monto_declarado', String(formPago.value.monto))
+    fd.append('moneda_pago', formPago.value.moneda)
+    fd.append('referencia_bancaria', formPago.value.referencia || 'Registrado por Administración')
+    if (formPago.value.banco_origen) {
+      fd.append('banco_origen', formPago.value.banco_origen)
+    }
+    if (archivoPagoManual.value) {
+      fd.append('comprobante', archivoPagoManual.value)
+    }
+    fd.append('marcar_aprobado', String(formPago.value.marcar_aprobado))
+
+    await pagosService.registrarManual(fd)
+    await Promise.all([
+      recibosStore.cargar(),
+      aptosStore.cargar(),
+    ])
+
+    // Sincronizar el modal de expediente en vivo
+    if (aptoSeleccionado.value) {
+      const actualizado = apartamentosConRecibos.value.find((a) => a.id === aptoSeleccionado.value.id)
+      if (actualizado) {
+        aptoSeleccionado.value = actualizado
+      }
+    }
+
+    toast.success('¡Pago registrado con éxito y mes marcado como pagado!')
+    modalPagoManualAbierto.value = false
+  } catch (error) {
+    toast.error(error.response?.data?.detail || 'Error al registrar el pago')
+  } finally {
+    guardandoPago.value = false
+  }
+}
+
+function abrirModalEmitirMes() {
+  formMesIndividual.value.periodo = new Date().toISOString().slice(0, 7)
+  formMesIndividual.value.monto_usd = aptoSeleccionado.value ? (parseFloat(aptoSeleccionado.value.alicuota) || 15.00) : 15.00
+  modalEmitirMesAbierto.value = true
+}
+
+async function guardarMesIndividual() {
+  if (!aptoSeleccionado.value) return
+  guardandoMes.value = true
+  try {
+    await recibosService.crearIndividual({
+      apartamento_id: aptoSeleccionado.value.id,
+      mes_periodo: formMesIndividual.value.periodo,
+      monto_total_usd: formMesIndividual.value.monto_usd,
+    })
+    await Promise.all([
+      recibosStore.cargar(),
+      aptosStore.cargar(),
+    ])
+
+    if (aptoSeleccionado.value) {
+      const actualizado = apartamentosConRecibos.value.find((a) => a.id === aptoSeleccionado.value.id)
+      if (actualizado) {
+        aptoSeleccionado.value = actualizado
+      }
+    }
+
+    toast.success(`Mes ${formMesIndividual.value.periodo} emitido correctamente.`)
+    modalEmitirMesAbierto.value = false
+  } catch (error) {
+    toast.error(error.response?.data?.detail || 'Error al emitir el mes')
+  } finally {
+    guardandoMes.value = false
+  }
 }
 </script>

@@ -8,9 +8,10 @@ from app.models.pago import Pago
 from app.models.recibo import Recibo
 from app.models.apartamento import Apartamento
 from app.schemas.pago import PagoOut
+from datetime import datetime
 from app.services.cloudinary_service import subir_comprobante
 from app.services.bcv_scraper import obtener_tasa_actual, convertir_ves_a_usd
-from app.auth.dependencies import get_usuario_actual
+from app.auth.dependencies import get_usuario_actual, require_admin
 from app.models.usuario import Usuario
 
 router = APIRouter(prefix="/api/pagos", tags=["Pagos"])
@@ -103,3 +104,92 @@ async def reportar_pago(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error en servidor al guardar pago: {str(e)}")
+
+
+@router.post("/admin-manual", response_model=PagoOut, status_code=201)
+async def registrar_pago_manual_admin(
+    recibo_id: int = Form(...),
+    metodo_pago: str = Form(...),
+    monto_declarado: Decimal = Form(...),
+    moneda_pago: str = Form("USD"),
+    referencia_bancaria: Optional[str] = Form("Pago registrado por Administración"),
+    banco_origen: Optional[str] = Form(None),
+    comprobante: Optional[UploadFile] = File(None),
+    marcar_aprobado: bool = Form(True),
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(require_admin),
+):
+    """
+    Permite al administrador cargar manualmente un pago y marcar que el residente
+    pagó ese mes de condominio (efectivo, pago móvil directo, transferencia, etc.).
+    """
+    try:
+        recibo = db.query(Recibo).filter(Recibo.id == recibo_id).first()
+        if not recibo:
+            raise HTTPException(status_code=404, detail="Recibo no encontrado")
+
+        apto = recibo.apartamento or db.query(Apartamento).filter(Apartamento.id == recibo.apartamento_id).first()
+        if not apto:
+            raise HTTPException(status_code=404, detail="Apartamento no encontrado")
+
+        tasa = obtener_tasa_actual(db)
+        if moneda_pago == "VES":
+            monto_usd = convertir_ves_a_usd(monto_declarado, tasa.tasa_usd_ves)
+        else:
+            monto_usd = monto_declarado
+
+        comprobante_url = ""
+        if comprobante and comprobante.filename:
+            try:
+                comprobante_url = await subir_comprobante(comprobante, apto.id)
+            except Exception:
+                comprobante_url = ""
+
+        ref = (referencia_bancaria or "").strip() or "Pago presencial verificado por Administración"
+
+        pago = Pago(
+            apartamento_id=apto.id,
+            recibo_id=recibo.id,
+            metodo_pago=metodo_pago,
+            banco_origen=banco_origen or "Presencial / Directo",
+            referencia_bancaria=ref,
+            monto_declarado=monto_declarado,
+            moneda_pago=moneda_pago,
+            tasa_bcv_aplicada=tasa.tasa_usd_ves,
+            monto_equivalente_usd=monto_usd,
+            comprobante_url=comprobante_url,
+            estado_conciliacion="aprobado" if marcar_aprobado else "en_revision",
+            aprobado_por=admin.id if marcar_aprobado else None,
+            fecha_aprobacion=datetime.utcnow() if marcar_aprobado else None,
+        )
+        db.add(pago)
+
+        if marcar_aprobado:
+            pendiente = recibo.monto_pendiente_usd
+            if monto_usd >= pendiente:
+                excedente = monto_usd - pendiente
+                recibo.monto_pendiente_usd = Decimal("0.00")
+                recibo.estado_pago = "pagado"
+                if excedente > 0:
+                    apto.saldo_favor_usd = (apto.saldo_favor_usd or Decimal("0.00")) + excedente
+            else:
+                recibo.monto_pendiente_usd = pendiente - monto_usd
+                recibo.estado_pago = "parcial"
+
+            db.flush()
+
+            # Sincronizar meses pendientes del apartamento
+            recibos_restantes = db.query(Recibo).filter(
+                Recibo.apartamento_id == apto.id,
+                Recibo.estado_pago != "pagado"
+            ).count()
+            apto.meses_pendientes = recibos_restantes
+
+        db.commit()
+        db.refresh(pago)
+        return pago
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al registrar pago manual: {str(e)}")

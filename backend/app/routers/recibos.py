@@ -2,6 +2,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from decimal import Decimal
+from pydantic import BaseModel
 from app.database import get_db
 from app.models.recibo import Recibo
 from app.schemas.recibo import ReciboOut, ReciboConApartamento, EmisionMasivaRequest
@@ -111,3 +113,55 @@ def eliminar_recibo(
         db.commit()
 
     return {"mensaje": "Recibo eliminado con éxito"}
+
+
+class ReciboIndividualRequest(BaseModel):
+    apartamento_id: int
+    mes_periodo: str
+    monto_total_usd: Optional[Decimal] = None
+
+
+@router.post("/crear-individual", response_model=ReciboOut, status_code=201)
+def crear_recibo_individual(
+    req: ReciboIndividualRequest,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    """Genera o emite un recibo para un mes específico a un apartamento si aún no existía."""
+    from datetime import date, timedelta
+    apto = db.query(Apartamento).filter(Apartamento.id == req.apartamento_id).first()
+    if not apto:
+        raise HTTPException(status_code=404, detail="Apartamento no encontrado")
+
+    existente = db.query(Recibo).filter(
+        Recibo.apartamento_id == apto.id,
+        Recibo.mes_periodo == req.mes_periodo
+    ).first()
+    if existente:
+        return existente
+
+    hoy = date.today()
+    monto = req.monto_total_usd if (req.monto_total_usd and req.monto_total_usd > 0) else (apto.alicuota or Decimal("15.00"))
+
+    nuevo = Recibo(
+        apartamento_id=apto.id,
+        mes_periodo=req.mes_periodo,
+        monto_total_usd=monto,
+        monto_pendiente_usd=monto,
+        estado_pago="pendiente",
+        fecha_emision=hoy,
+        fecha_vencimiento=hoy + timedelta(days=15),
+    )
+    db.add(nuevo)
+    db.flush()
+
+    # Actualizar meses pendientes
+    pendientes = db.query(Recibo).filter(
+        Recibo.apartamento_id == apto.id,
+        Recibo.estado_pago != "pagado"
+    ).count()
+    apto.meses_pendientes = pendientes
+
+    db.commit()
+    db.refresh(nuevo)
+    return nuevo

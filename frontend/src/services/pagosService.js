@@ -8,4 +8,9 @@ export const pagosService = {
     api.post('/pagos/reportar', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
+
+  registrarManual: (formData) =>
+    api.post('/pagos/admin-manual', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 }
