@@ -165,3 +165,130 @@ def crear_recibo_individual(
     db.commit()
     db.refresh(nuevo)
     return nuevo
+
+
+@router.post("/{recibo_id}/aprobar", response_model=ReciboOut)
+def aprobar_pago_recibo(
+    recibo_id: int,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(require_admin),
+):
+    """
+    Aprueba el pago reportado por el residente para este recibo.
+    Si el residente subió el pago desde la página web (estado 'en_revision'), lo aprueba inmediatamente.
+    Si el pago se envió por otro medio, marca el recibo como solvente y crea el registro de pago administrativo.
+    Sincroniza la solvencia del apartamento y genera el recibo digital.
+    """
+    from datetime import datetime
+    from app.models.pago import Pago
+    from app.services.bcv_scraper import obtener_tasa_actual
+
+    recibo = db.query(Recibo).filter(Recibo.id == recibo_id).first()
+    if not recibo:
+        raise HTTPException(status_code=404, detail="Recibo no encontrado")
+
+    apto = recibo.apartamento or db.query(Apartamento).filter(Apartamento.id == recibo.apartamento_id).first()
+
+    # Buscar si existe un pago reportado por el propietario
+    pago = db.query(Pago).filter(
+        Pago.recibo_id == recibo_id,
+        Pago.estado_conciliacion == "en_revision"
+    ).order_by(Pago.id.desc()).first()
+
+    if pago:
+        pago.estado_conciliacion = "aprobado"
+        pago.fecha_aprobacion = datetime.utcnow()
+        pago.aprobado_por = admin.id
+        monto_usd = pago.monto_equivalente_usd
+        pendiente = recibo.monto_pendiente_usd or Decimal("15.00")
+        if monto_usd > pendiente and apto:
+            excedente = monto_usd - pendiente
+            apto.saldo_favor_usd = (apto.saldo_favor_usd or Decimal("0.00")) + excedente
+    else:
+        # Pago directo presencial verificado por administración
+        tasa = obtener_tasa_actual(db)
+        pago = Pago(
+            apartamento_id=recibo.apartamento_id,
+            recibo_id=recibo.id,
+            metodo_pago="efectivo_usd",
+            banco_origen="Verificación directa Administración",
+            referencia_bancaria="Aprobado directamente por el Administrador",
+            monto_declarado=recibo.monto_total_usd,
+            moneda_pago="USD",
+            tasa_bcv_aplicada=tasa.tasa_usd_ves if tasa else Decimal("0"),
+            monto_equivalente_usd=recibo.monto_total_usd,
+            comprobante_url="",
+            estado_conciliacion="aprobado",
+            fecha_aprobacion=datetime.utcnow(),
+            aprobado_por=admin.id,
+        )
+        db.add(pago)
+
+    recibo.monto_pendiente_usd = Decimal("0.00")
+    recibo.estado_pago = "pagado"
+    db.flush()
+
+    if apto:
+        recibos_restantes = db.query(Recibo).filter(
+            Recibo.apartamento_id == apto.id,
+            Recibo.estado_pago != "pagado"
+        ).count()
+        apto.meses_pendientes = recibos_restantes
+
+    db.commit()
+    db.refresh(recibo)
+
+    # Enviar notificación WhatsApp si aplica
+    try:
+        if apto and apto.propietario:
+            from app.tasks.notificaciones import enviar_whatsapp
+            from app.config import get_settings
+            s = get_settings()
+            msg = (
+                f"✅ Pago verificado y aprobado — {s.condominio_nombre}\n"
+                f"Apartamento: {apto.numero_apto}\n"
+                f"Período: {recibo.mes_periodo}\n"
+                f"Monto: ${float(recibo.monto_total_usd):.2f} USD\n"
+                f"Su mes fue marcado como solvente.\n"
+                f"Comprobante digital disponible en: {s.condominio_portal_url}/mi-cuenta/recibos"
+            )
+            if apto.propietario.telefono_whatsapp:
+                enviar_whatsapp.delay(apto.propietario.telefono_whatsapp, msg)
+    except BaseException:
+        pass
+
+    return recibo
+
+
+@router.post("/{recibo_id}/rechazar", response_model=ReciboOut)
+def rechazar_pago_recibo(
+    recibo_id: int,
+    motivo: Optional[str] = None,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(require_admin),
+):
+    """Rechaza el comprobante enviado por el residente para este recibo."""
+    from datetime import datetime
+    from app.models.pago import Pago
+
+    recibo = db.query(Recibo).filter(Recibo.id == recibo_id).first()
+    if not recibo:
+        raise HTTPException(status_code=404, detail="Recibo no encontrado")
+
+    pago = db.query(Pago).filter(
+        Pago.recibo_id == recibo_id,
+        Pago.estado_conciliacion == "en_revision"
+    ).order_by(Pago.id.desc()).first()
+
+    if not pago:
+        raise HTTPException(status_code=400, detail="No hay pago en revisión para este recibo")
+
+    pago.estado_conciliacion = "rechazado"
+    pago.motivo_rechazo = motivo or "Comprobante rechazado por la administración"
+    pago.fecha_aprobacion = datetime.utcnow()
+    pago.aprobado_por = admin.id
+
+    db.commit()
+    db.refresh(recibo)
+    return recibo
+

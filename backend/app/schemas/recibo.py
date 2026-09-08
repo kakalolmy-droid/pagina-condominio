@@ -18,6 +18,7 @@ class ReciboOut(ReciboBase):
     id: int
     monto_pendiente_usd: Decimal
     estado_pago: str
+    ultimo_pago_id: Optional[int] = None
     ultimo_pago_estado: Optional[str] = None
     comprobante_url: Optional[str] = None
     ultimo_pago_referencia: Optional[str] = None

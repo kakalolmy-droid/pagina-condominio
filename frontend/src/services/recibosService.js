@@ -16,6 +16,12 @@ export const recibosService = {
   crearIndividual: (data) =>
     api.post('/recibos/crear-individual', data),
 
+  aprobarPago: (id) =>
+    api.post(`/recibos/${id}/aprobar`),
+
+  rechazarPago: (id, motivo) =>
+    api.post(`/recibos/${id}/rechazar`, null, { params: { motivo } }),
+
   eliminar: (id) =>
     api.delete(`/recibos/${id}`),
 }

@@ -322,20 +322,50 @@
                   {{ formatFecha(recibo.fecha_vencimiento) }}
                 </td>
 
-                <!-- Estado -->
+                <!-- Estado con detección de pago en revisión -->
                 <td class="py-3 px-3 align-middle text-center whitespace-nowrap">
                   <div class="flex items-center justify-center">
-                    <EstadoPagoBadge :estado="recibo.estado_pago" />
+                    <span
+                      v-if="recibo.estado_pago === 'pagado'"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-sm"
+                    >
+                      <span>✓</span>
+                      <span>PAGADO</span>
+                    </span>
+                    <span
+                      v-else-if="recibo.ultimo_pago_estado === 'en_revision'"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-amber-500 text-white shadow-sm animate-pulse"
+                      title="¡El residente reportó el pago desde la web! Comprobante listo para verificar"
+                    >
+                      <span>⏳</span>
+                      <span>EN REVISIÓN</span>
+                    </span>
+                    <span
+                      v-else-if="recibo.ultimo_pago_estado === 'rechazado'"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-sm"
+                      title="Comprobante rechazado"
+                    >
+                      <span>❌</span>
+                      <span>RECHAZADO</span>
+                    </span>
+                    <span
+                      v-else
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-rose-500 text-white shadow-sm"
+                    >
+                      <span>●</span>
+                      <span>PENDIENTE</span>
+                    </span>
                   </div>
                 </td>
 
-                <!-- Comprobante de Pago Enviado por la Persona -->
+                <!-- Comprobante de Pago Enviado por el Residente -->
                 <td class="py-3 px-3 align-middle text-center whitespace-nowrap">
                   <div v-if="recibo.comprobante_url" class="flex flex-col items-center justify-center gap-1">
                     <button
                       type="button"
                       @click="verFotoComprobante(recibo)"
                       class="px-3 py-1.5 rounded-neu-sm bg-neu-bg shadow-neu-sm hover:shadow-neu-inset text-neu-green border border-white/60 font-bold text-xs transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
+                      title="Inspeccionar la captura y verificar el pago"
                     >
                       <span>📷</span>
                       <span>Ver Captura</span>
@@ -345,29 +375,55 @@
                     </span>
                   </div>
                   <div v-else class="text-xs text-neu-text-light italic font-medium">
-                    Sin comprobante
+                    Sin comprobante web
                   </div>
                 </td>
 
                 <!-- Anotar / Marcar Pago de este mes -->
                 <td class="py-3 px-3 align-middle text-center whitespace-nowrap">
-                  <div class="flex items-center justify-center">
+                  <div class="flex items-center justify-center gap-1.5">
+                    <!-- Si el residente subió el pago desde la página web (En Revisión) -->
+                    <template v-if="recibo.estado_pago !== 'pagado' && recibo.ultimo_pago_estado === 'en_revision'">
+                      <button
+                        type="button"
+                        @click="verFotoComprobante(recibo)"
+                        class="px-3 py-1.5 rounded-neu-sm bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap"
+                        title="Ver comprobante y verificar pago del residente"
+                      >
+                        <span>✓</span>
+                        <span>Verificar y Marcar Pagado</span>
+                      </button>
+                      <button
+                        type="button"
+                        @click="aprobarPagoDirecto(recibo)"
+                        :disabled="procesandoAprobacionId === recibo.id"
+                        class="w-8 h-8 rounded-neu-sm bg-neu-bg shadow-neu-sm hover:shadow-neu-inset text-emerald-700 border border-emerald-300 font-bold text-xs flex items-center justify-center transition-all cursor-pointer shrink-0"
+                        title="Marcar como pagado de inmediato con 1 clic"
+                      >
+                        <span v-if="procesandoAprobacionId === recibo.id">⌛</span>
+                        <span v-else>⚡</span>
+                      </button>
+                    </template>
+
+                    <!-- Si el residente pagó por otro medio (efectivo, WhatsApp, etc.) y NO hay pago web en revisión -->
                     <button
-                      v-if="recibo.estado_pago !== 'pagado'"
+                      v-else-if="recibo.estado_pago !== 'pagado'"
                       type="button"
                       @click="abrirModalPagoManualParaRecibo(recibo)"
-                      class="px-3.5 py-1.5 rounded-neu-sm bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-sm transition-all cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap"
-                      title="Anotar pago y marcar que este mes fue pagado"
+                      class="px-3.5 py-1.5 rounded-neu-sm bg-neu-bg shadow-neu-sm hover:shadow-neu-inset text-neu-green hover:text-emerald-700 border border-white/60 font-extrabold text-xs transition-all cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap"
+                      title="Anotar pago manual (efectivo, WhatsApp, etc.) y marcar como pagado"
                     >
                       <span>💳</span>
-                      <span>Marcar Pagado</span>
+                      <span>Marcar Pagado Manual</span>
                     </button>
+
+                    <!-- Si ya está pagado -->
                     <span
                       v-else
-                      class="inline-flex items-center gap-1 text-emerald-700 font-extrabold text-xs bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200"
+                      class="inline-flex items-center gap-1 text-emerald-700 font-extrabold text-xs bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 shadow-sm"
                     >
                       <span>✓</span>
-                      <span>Pagado</span>
+                      <span>Pagado y Solvente</span>
                     </span>
                   </div>
                 </td>
@@ -393,14 +449,44 @@
       </div>
     </NeuModal>
 
-    <!-- ──────────────── MODAL 2: VISOR DE FOTO DEL COMPROBANTE ──────────────── -->
+    <!-- ──────────────── MODAL 2: VISOR Y VERIFICACIÓN DEL COMPROBANTE ──────────────── -->
     <NeuModal
       v-model="modalFotoComprobanteAbierto"
-      :title="reciboParaComprobante ? `Comprobante de Pago — Período ${formatPeriodo(reciboParaComprobante.mes_periodo)}` : 'Comprobante de Pago'"
+      :title="reciboParaComprobante ? `Verificar Pago — Apto ${obtenerNumeroApto(reciboParaComprobante.apartamento_id)} (${formatPeriodo(reciboParaComprobante.mes_periodo)})` : 'Verificar Pago'"
       size="3xl"
     >
       <div v-if="reciboParaComprobante" class="flex flex-col items-center gap-4">
-        <!-- Tarjeta de Resumen del Pago -->
+        <!-- Banner de Estado de Verificación -->
+        <div
+          class="w-full p-3 rounded-neu-sm border flex items-center justify-between text-xs"
+          :class="reciboParaComprobante.estado_pago === 'pagado'
+            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+            : reciboParaComprobante.ultimo_pago_estado === 'en_revision'
+            ? 'bg-amber-50 text-amber-900 border-amber-300'
+            : 'bg-neu-bg-dark text-neu-text border-neu-shadow-dark'"
+        >
+          <div class="flex items-center gap-2">
+            <span class="text-base">{{ reciboParaComprobante.estado_pago === 'pagado' ? '✅' : '⏳' }}</span>
+            <div>
+              <span class="font-extrabold block">
+                {{ reciboParaComprobante.estado_pago === 'pagado'
+                  ? 'Este recibo ya fue verificado y aprobado como Pagado.'
+                  : 'Pago reportado por el residente desde el portal web — Listo para verificar.' }}
+              </span>
+              <span class="text-[11px] text-neu-text-light">
+                Verifica los datos bancarios y presiona "Aprobar y Marcar como Pagado" para actualizar la solvencia.
+              </span>
+            </div>
+          </div>
+          <span
+            v-if="reciboParaComprobante.estado_pago !== 'pagado'"
+            class="px-2.5 py-1 rounded-full bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider shrink-0"
+          >
+            En Revisión
+          </span>
+        </div>
+
+        <!-- Tarjeta de Resumen del Pago Reportado -->
         <div class="w-full grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-neu-bg-dark p-3 rounded-neu-sm border border-neu-shadow-dark">
           <div>
             <span class="text-[10px] font-bold text-neu-text-light uppercase tracking-wider block">Apartamento</span>
@@ -416,30 +502,58 @@
           </div>
           <div>
             <span class="text-[10px] font-bold text-neu-text-light uppercase tracking-wider block">Monto Declarado</span>
-            <strong class="text-neu-text">{{ reciboParaComprobante.ultimo_pago_monto ? formatUSD(reciboParaComprobante.ultimo_pago_monto) : 'Declarado' }}</strong>
+            <strong class="text-neu-text font-black">{{ reciboParaComprobante.ultimo_pago_monto ? formatUSD(reciboParaComprobante.ultimo_pago_monto) : formatUSD(reciboParaComprobante.monto_total_usd) }}</strong>
           </div>
         </div>
 
         <!-- Visor del Comprobante (Imagen o PDF) -->
-        <div class="w-full flex justify-center bg-black/5 p-2 rounded-neu-sm border border-neu-shadow-dark max-h-[65vh] overflow-auto">
+        <div class="w-full flex justify-center bg-black/5 p-2 rounded-neu-sm border border-neu-shadow-dark max-h-[60vh] overflow-auto">
           <iframe
             v-if="esPdf(reciboParaComprobante.comprobante_url)"
             :src="reciboParaComprobante.comprobante_url"
-            class="w-full h-[60vh] rounded-neu-sm border-0"
+            class="w-full h-[55vh] rounded-neu-sm border-0"
           ></iframe>
           <img
             v-else-if="reciboParaComprobante.comprobante_url"
             :src="reciboParaComprobante.comprobante_url"
             alt="Foto del Comprobante de Pago enviado por la persona"
-            class="max-h-[60vh] max-w-full object-contain rounded-neu-sm shadow-md"
+            class="max-h-[55vh] max-w-full object-contain rounded-neu-sm shadow-md"
           />
           <div v-else class="py-8 text-center text-neu-text-light text-xs">
             No se encontró el archivo del comprobante.
           </div>
         </div>
 
-        <!-- Botones inferiores -->
-        <div class="flex items-center justify-between w-full mt-2">
+        <!-- Formulario opcional para rechazo -->
+        <div v-if="mostrandoRechazoEnComprobante" class="w-full p-3 bg-rose-50 rounded-neu-sm border border-rose-300 flex flex-col gap-2">
+          <span class="text-xs font-bold text-rose-800">Indica el motivo por el cual rechazas este pago:</span>
+          <input
+            v-model="motivoRechazoTexto"
+            type="text"
+            placeholder="Ej. La referencia no aparece en el banco, captura ilegible, monto incompleto..."
+            class="input-neu text-xs py-2 px-3 w-full bg-white"
+          />
+          <div class="flex justify-end gap-2">
+            <button
+              type="button"
+              @click="mostrandoRechazoEnComprobante = false"
+              class="px-3 py-1 rounded-neu-sm text-xs text-neu-text bg-white border border-neu-shadow-dark"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              @click="confirmarRechazoComprobante"
+              :disabled="procesandoAprobacionId === reciboParaComprobante.id"
+              class="px-3 py-1 rounded-neu-sm text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-sm"
+            >
+              Confirmar Rechazo
+            </button>
+          </div>
+        </div>
+
+        <!-- Botones inferiores de Acción -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 w-full pt-3 border-t border-neu-shadow-dark">
           <a
             v-if="reciboParaComprobante.comprobante_url"
             :href="reciboParaComprobante.comprobante_url"
@@ -451,9 +565,33 @@
           </a>
           <span v-else></span>
 
-          <NeuButton type="button" @click="modalFotoComprobanteAbierto = false">
-            Cerrar
-          </NeuButton>
+          <div class="flex items-center gap-2.5">
+            <!-- Botón Rechazar (Visible solo si no está pagado) -->
+            <button
+              v-if="reciboParaComprobante.estado_pago !== 'pagado' && !mostrandoRechazoEnComprobante"
+              type="button"
+              @click="mostrandoRechazoEnComprobante = true"
+              class="px-3 py-2 rounded-neu-sm bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs transition-all cursor-pointer"
+            >
+              ✕ Rechazar Pago
+            </button>
+
+            <!-- Botón Principal: Aprobar y Marcar como Pagado -->
+            <button
+              v-if="reciboParaComprobante.estado_pago !== 'pagado'"
+              type="button"
+              @click="aprobarPagoDesdeComprobante"
+              :disabled="procesandoAprobacionId === reciboParaComprobante.id"
+              class="px-4 py-2 rounded-neu-sm bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <span>{{ procesandoAprobacionId === reciboParaComprobante.id ? '⌛' : '✓' }}</span>
+              <span>{{ procesandoAprobacionId === reciboParaComprobante.id ? 'Aprobando...' : 'Aprobar y Marcar como Pagado' }}</span>
+            </button>
+
+            <NeuButton type="button" @click="modalFotoComprobanteAbierto = false">
+              Cerrar
+            </NeuButton>
+          </div>
         </div>
       </div>
     </NeuModal>
@@ -900,9 +1038,82 @@ function esPdf(url) {
   return url && (url.startsWith('data:application/pdf') || url.toLowerCase().includes('.pdf'))
 }
 
+const procesandoAprobacionId = ref(null)
+const mostrandoRechazoEnComprobante = ref(false)
+const motivoRechazoTexto = ref('')
+
 function verFotoComprobante(recibo) {
   reciboParaComprobante.value = recibo
+  mostrandoRechazoEnComprobante.value = false
+  motivoRechazoTexto.value = ''
   modalFotoComprobanteAbierto.value = true
+}
+
+async function aprobarPagoReciboGenerico(recibo) {
+  if (!recibo) return
+  procesandoAprobacionId.value = recibo.id
+  try {
+    await recibosService.aprobarPago(recibo.id)
+    await Promise.all([
+      recibosStore.cargar(),
+      aptosStore.cargar(),
+    ])
+
+    // Sincronizar modal de expediente en vivo
+    if (aptoSeleccionado.value) {
+      const actualizado = apartamentosConRecibos.value.find((a) => a.id === aptoSeleccionado.value.id)
+      if (actualizado) {
+        aptoSeleccionado.value = actualizado
+      }
+    }
+
+    if (reciboParaComprobante.value && reciboParaComprobante.value.id === recibo.id) {
+      reciboParaComprobante.value.estado_pago = 'pagado'
+      reciboParaComprobante.value.ultimo_pago_estado = 'aprobado'
+      modalFotoComprobanteAbierto.value = false
+    }
+
+    toast.success('¡Pago verificado y aprobado! El mes ha sido marcado como pagado exitosamente.')
+  } catch (error) {
+    toast.error(error.response?.data?.detail || 'Error al aprobar el pago')
+  } finally {
+    procesandoAprobacionId.value = null
+  }
+}
+
+async function aprobarPagoDesdeComprobante() {
+  if (!reciboParaComprobante.value) return
+  await aprobarPagoReciboGenerico(reciboParaComprobante.value)
+}
+
+async function aprobarPagoDirecto(recibo) {
+  await aprobarPagoReciboGenerico(recibo)
+}
+
+async function confirmarRechazoComprobante() {
+  if (!reciboParaComprobante.value) return
+  procesandoAprobacionId.value = reciboParaComprobante.value.id
+  try {
+    await recibosService.rechazarPago(reciboParaComprobante.value.id, motivoRechazoTexto.value)
+    await Promise.all([
+      recibosStore.cargar(),
+      aptosStore.cargar(),
+    ])
+    if (aptoSeleccionado.value) {
+      const actualizado = apartamentosConRecibos.value.find((a) => a.id === aptoSeleccionado.value.id)
+      if (actualizado) {
+        aptoSeleccionado.value = actualizado
+      }
+    }
+    modalFotoComprobanteAbierto.value = false
+    mostrandoRechazoEnComprobante.value = false
+    motivoRechazoTexto.value = ''
+    toast.info('Comprobante rechazado. El residente podrá volver a reportar su pago.')
+  } catch (error) {
+    toast.error(error.response?.data?.detail || 'Error al rechazar el pago')
+  } finally {
+    procesandoAprobacionId.value = null
+  }
 }
 
 // ── LÓGICA DE CARGA Y ANOTACIÓN DE PAGO MANUAL ──

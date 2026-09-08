@@ -26,8 +26,17 @@ class Recibo(Base):
     @property
     def ultimo_pago(self):
         if self.pagos:
+            # Priorizar pago en revisión si existe
+            en_rev = [p for p in self.pagos if p.estado_conciliacion == "en_revision"]
+            if en_rev:
+                return en_rev[-1]
             return self.pagos[-1]
         return None
+
+    @property
+    def ultimo_pago_id(self):
+        p = self.ultimo_pago
+        return p.id if p else None
 
     @property
     def ultimo_pago_estado(self):
