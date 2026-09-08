@@ -16,10 +16,12 @@
         <!-- Botón Salir Móvil (visible solo en pantallas chicas) -->
         <button
           @click="cerrarSesion"
-          class="md:hidden w-9 h-9 rounded-neu-sm bg-neu-bg shadow-neu-sm text-neu-danger hover:shadow-neu-inset transition-all flex items-center justify-center font-bold border border-white/60 cursor-pointer"
+          class="md:hidden w-9 h-9 rounded-neu-sm bg-neu-bg shadow-neu-sm text-neu-danger hover:shadow-neu-inset hover:bg-rose-50/60 transition-all flex items-center justify-center font-bold border border-white/60 cursor-pointer"
           title="Cerrar Sesión"
         >
-          🚪
+          <svg class="w-4 h-4 text-neu-danger" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+          </svg>
         </button>
       </div>
 
@@ -62,10 +64,12 @@
         <!-- Botón Salir Desktop -->
         <button
           @click="cerrarSesion"
-          class="hidden md:flex w-9 h-9 rounded-neu-sm bg-neu-bg shadow-neu-sm text-neu-danger hover:shadow-neu-inset transition-all items-center justify-center font-bold border border-white/60 cursor-pointer ml-2"
+          class="hidden md:flex w-9 h-9 sm:w-10 sm:h-10 rounded-neu-sm bg-neu-bg shadow-neu-sm text-neu-danger hover:shadow-neu-inset hover:bg-rose-50/60 transition-all items-center justify-center font-bold border border-white/60 cursor-pointer ml-2 group shrink-0"
           title="Cerrar Sesión"
         >
-          🚪
+          <svg class="w-4 h-4 text-neu-danger transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+          </svg>
         </button>
       </div>
     </header>

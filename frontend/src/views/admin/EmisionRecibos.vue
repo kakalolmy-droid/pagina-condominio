@@ -1,7 +1,7 @@
 <template>
   <AdminLayout
     titulo="Recibos por Apartamento y Residentes"
-    subtitulo="Control de cuotas mensuales, solvencia y comprobantes de pago organizados por apartamento (PB al piso 16 y PH)"
+    subtitulo="Control de cuotas mensuales, solvencia y comprobantes por apartamento (PB a PH)"
   >
     <!-- Barra de Búsqueda y Filtros con Simetría y Mayor Espacio -->
     <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
@@ -53,7 +53,7 @@
               <span>🏢</span> Control por Apartamentos y Residentes
             </h3>
             <p class="text-xs text-neu-text-light mt-0.5">
-              Ordenado de Planta Baja (PB) al piso 16 y Penthouse (PH). Haz clic en "Ver Recibos y Pagos" para consultar meses y fotos de comprobantes.
+              Ordenado de Planta Baja (PB) al piso 16 y Penthouse (PH). Haz clic en "Ver Recibos" para consultar meses y comprobantes.
             </p>
           </div>
           <div class="flex items-center gap-2">
@@ -67,13 +67,13 @@
           <table class="w-full text-left border-collapse">
             <thead>
               <tr class="border-b border-neu-shadow-dark text-neu-text-light text-[11px] uppercase tracking-wider">
-                <th class="py-3 px-3.5 font-bold text-left whitespace-nowrap">Apartamento</th>
-                <th class="py-3 px-3.5 font-bold text-left whitespace-nowrap">Residente</th>
-                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Cuota Fijada</th>
-                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Recibos</th>
-                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Total Deuda</th>
-                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Estado</th>
-                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Expediente</th>
+                <th class="py-2.5 px-2.5 sm:px-3 font-bold text-left whitespace-nowrap">Apartamento</th>
+                <th class="py-2.5 px-2.5 sm:px-3 font-bold text-left whitespace-nowrap">Residente</th>
+                <th class="py-2.5 px-2.5 sm:px-3 font-bold text-center whitespace-nowrap">Cuota Fijada</th>
+                <th class="py-2.5 px-2.5 sm:px-3 font-bold text-center whitespace-nowrap">Recibos</th>
+                <th class="py-2.5 px-2.5 sm:px-3 font-bold text-center whitespace-nowrap">Total Deuda</th>
+                <th class="py-2.5 px-2.5 sm:px-3 font-bold text-center whitespace-nowrap">Estado</th>
+                <th class="py-2.5 px-2.5 sm:px-3 font-bold text-center whitespace-nowrap">Expediente</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-neu-bg-dark">
@@ -83,8 +83,8 @@
                 class="hover:bg-neu-bg-dark/40 transition-colors"
               >
                 <!-- Apartamento -->
-                <td class="py-3.5 px-3.5 align-middle whitespace-nowrap">
-                  <div class="flex items-center gap-2.5">
+                <td class="py-2.5 px-2.5 sm:px-3 align-middle whitespace-nowrap">
+                  <div class="flex items-center gap-2">
                     <span class="px-2.5 py-1 rounded-neu-sm bg-neu-bg shadow-neu-sm font-extrabold text-neu-green text-xs border border-white/60 shrink-0">
                       🏢 Apto {{ apto.numero_apto }}
                     </span>
@@ -95,10 +95,10 @@
                 </td>
 
                 <!-- Habitante / Propietario -->
-                <td class="py-3.5 px-3.5 align-middle">
-                  <div class="flex items-center gap-3">
+                <td class="py-2.5 px-2.5 sm:px-3 align-middle">
+                  <div class="flex items-center gap-2.5">
                     <div
-                      class="w-8 h-8 rounded-full text-white font-extrabold flex items-center justify-center text-xs shadow-sm shrink-0"
+                      class="w-7 h-7 sm:w-8 sm:h-8 rounded-full text-white font-extrabold flex items-center justify-center text-xs shadow-sm shrink-0"
                       :class="apto.propietario ? 'bg-neu-green' : 'bg-neutral-400'"
                     >
                       {{ apto.propietario ? apto.habitanteNombre.charAt(0) : '?' }}
@@ -121,7 +121,7 @@
                 </td>
 
                 <!-- Cuota mensual por alícuota -->
-                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
+                <td class="py-2.5 px-2.5 sm:px-3 align-middle text-center whitespace-nowrap">
                   <span class="font-bold text-neu-text text-xs sm:text-sm block">
                     {{ formatUSD(apto.alicuota) }}
                   </span>
@@ -131,36 +131,36 @@
                 </td>
 
                 <!-- Cantidad de recibos -->
-                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
+                <td class="py-2.5 px-2.5 sm:px-3 align-middle text-center whitespace-nowrap">
                   <div class="flex items-center justify-center">
                     <span
-                      class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap min-w-[120px] shadow-sm"
+                      class="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap min-w-[105px] shadow-sm"
                       :class="apto.totalPendientes > 0 ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'"
                     >
                       <span>{{ apto.totalPendientes > 0 ? '⚠️' : '✓' }}</span>
-                      <span>{{ apto.totalPendientes > 0 ? `${apto.totalPendientes} pendiente(s)` : `${apto.totalEmitidos} al día` }}</span>
+                      <span>{{ apto.totalPendientes > 0 ? `${apto.totalPendientes} pend.` : `${apto.totalEmitidos} al día` }}</span>
                     </span>
                   </div>
                 </td>
 
                 <!-- Total Deuda (USD y Bs. juntos para evitar desborde horizontal) -->
-                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
+                <td class="py-2.5 px-2.5 sm:px-3 align-middle text-center whitespace-nowrap">
                   <span
                     class="font-extrabold text-xs sm:text-sm block"
                     :class="apto.totalDeudaUSD > 0 ? 'text-neu-danger' : 'text-neu-success'"
                   >
                     {{ formatUSD(apto.totalDeudaUSD) }}
                   </span>
-                  <span class="text-[11px] text-neu-text-light font-medium block mt-0.5">
+                  <span class="text-[10px] text-neu-text-light font-medium block mt-0.5">
                     {{ formatVES(apto.totalDeudaVES) }}
                   </span>
                 </td>
 
                 <!-- Estado (Solvente / Moroso) -->
-                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
+                <td class="py-2.5 px-2.5 sm:px-3 align-middle text-center whitespace-nowrap">
                   <div class="flex items-center justify-center">
                     <span
-                      class="inline-flex items-center justify-center gap-1.5 px-3.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider whitespace-nowrap shadow-sm min-w-[105px]"
+                      class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider whitespace-nowrap shadow-sm min-w-[95px]"
                       :class="apto.esSolvente ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'"
                     >
                       <span class="text-[11px] leading-none">{{ apto.esSolvente ? '✓' : '●' }}</span>
@@ -170,16 +170,16 @@
                 </td>
 
                 <!-- Botón de acción para ver sus recibos y comprobantes -->
-                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
+                <td class="py-2.5 px-2.5 sm:px-3 align-middle text-center whitespace-nowrap">
                   <div class="flex items-center justify-center">
                     <button
                       type="button"
                       @click="abrirExpedienteApto(apto)"
-                      class="px-3.5 py-1.5 rounded-neu-sm text-xs font-bold bg-neu-bg shadow-neu-sm hover:shadow-neu-inset text-neu-green border border-white/60 transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
+                      class="px-3 py-1.5 rounded-neu-sm text-xs font-bold bg-neu-bg shadow-neu-sm hover:shadow-neu-inset text-neu-green border border-white/60 transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
                       title="Ver todos los meses de pago y fotos de comprobantes de esta persona"
                     >
                       <span>👁️</span>
-                      <span>Ver Recibos y Pagos</span>
+                      <span>Ver Recibos</span>
                     </button>
                   </div>
                 </td>
