@@ -35,7 +35,7 @@
           <input
             v-model="busqueda"
             type="text"
-            placeholder="Buscar por apto, piso o persona..."
+            placeholder="Buscar por apartamento o propietario..."
             class="input-neu text-xs py-2.5 px-3"
           />
         </div>
@@ -56,30 +56,6 @@
       </div>
 
       <div class="flex items-center gap-2.5 flex-wrap w-full lg:w-auto justify-end">
-        <!-- Botón de Simulación de Cambio de Mes -->
-        <button
-          type="button"
-          @click="simularAvanceMes"
-          :disabled="simulando"
-          class="px-3.5 py-2 rounded-neu-sm bg-neu-bg shadow-neu-sm hover:shadow-neu text-xs font-bold text-neu-green border border-white/60 flex items-center gap-1.5 cursor-pointer transition-all"
-          title="Simular paso al siguiente mes sumando +1 mes de cuota a todos los apartamentos activos"
-        >
-          <span>📅</span>
-          <span>{{ simulando ? 'Simulando...' : 'Simular Fin de Mes (+1 Cuota)' }}</span>
-        </button>
-
-        <button
-          v-if="seHaSimulado"
-          type="button"
-          @click="revertirSimulacion"
-          :disabled="simulando"
-          class="px-3 py-2 rounded-neu-sm bg-neu-bg shadow-neu-sm hover:shadow-neu text-xs font-bold text-neu-text-light hover:text-neu-danger border border-white/60 flex items-center gap-1 cursor-pointer transition-all"
-          title="Deshacer el mes de prueba sumado"
-        >
-          <span>↩️</span>
-          <span>Deshacer</span>
-        </button>
-
         <NeuButton variant="primary" @click="abrirModalCrear">
           ➕ Registrar Apartamento
         </NeuButton>
@@ -363,28 +339,24 @@ const aptosFiltrados = computed(() => {
     })
   }
 
-  // Buscador de texto (apto, piso, persona propietaria)
+  // Buscador de texto: exclusivamente por apartamento o propietario
   if (busqueda.value.trim()) {
     const q = busqueda.value.toLowerCase().trim()
     const qSinGuion = q.replace(/[^a-z0-9]/g, '')
+    const qLimpio = q.replace(/^apto\s*/, '')
     lista = lista.filter((a) => {
       const aptoNum = String(a.numero_apto || '').toLowerCase()
       const aptoSinGuion = aptoNum.replace(/[^a-z0-9]/g, '')
-      const piso = String(a.piso || '').toLowerCase()
       const prop = a.propietario ? `${a.propietario.nombre || ''} ${a.propietario.apellido || ''}`.toLowerCase() : ''
 
-      if (aptoNum.includes(q) || (qSinGuion && aptoSinGuion.includes(qSinGuion))) return true
-      if (`apto ${aptoNum}`.includes(q)) return true
-      if (prop.includes(q)) return true
-      if (
-        piso === q ||
-        `piso ${piso}`.includes(q) ||
-        (q === 'pb' && (piso === '0' || piso.includes('pb'))) ||
-        (q === 'ph' && (piso === 'ph' || piso.includes('ph'))) ||
-        (q.includes('penthouse') && piso.includes('ph'))
-      ) return true
+      const coincideApto =
+        aptoNum.includes(q) ||
+        (qSinGuion && aptoSinGuion.includes(qSinGuion)) ||
+        (qLimpio && aptoNum.includes(qLimpio)) ||
+        `apto ${aptoNum}`.includes(q)
+      const coincideProp = prop.includes(q)
 
-      return false
+      return coincideApto || coincideProp
     })
   }
 

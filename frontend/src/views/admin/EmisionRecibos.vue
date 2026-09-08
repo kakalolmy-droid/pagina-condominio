@@ -1,7 +1,7 @@
 <template>
   <AdminLayout
     titulo="Recibos por Apartamento y Residentes"
-    subtitulo="Control de cuotas mensuales, solvencia y comprobantes de pago organizados por apartamento (PB al 16)"
+    subtitulo="Control de cuotas mensuales, solvencia y comprobantes de pago organizados por apartamento (PB al piso 16 y PH)"
   >
     <!-- Barra de Búsqueda y Filtros con Simetría y Mayor Espacio -->
     <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
@@ -12,7 +12,7 @@
         <input
           v-model="filtroTexto"
           type="text"
-          placeholder="Buscar por apartamento, residente o teléfono..."
+          placeholder="Buscar por número de apartamento o nombre del residente/propietario..."
           class="input-neu text-xs py-2.5 pl-9 pr-3 w-full"
         />
       </div>
@@ -44,7 +44,7 @@
       </div>
     </div>
 
-    <!-- ──────────────── VISTA PRINCIPAL: POR APARTAMENTOS Y RESIDENTES (PB AL 16) ──────────────── -->
+    <!-- ──────────────── VISTA PRINCIPAL: POR APARTAMENTOS Y RESIDENTES (PB AL 16 Y PH) ──────────────── -->
     <div>
       <NeuCard>
         <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3.5 mb-3 border-b border-neu-shadow-dark/40 gap-2">
@@ -53,7 +53,7 @@
               <span>🏢</span> Control por Apartamentos y Residentes
             </h3>
             <p class="text-xs text-neu-text-light mt-0.5">
-              Ordenado de Planta Baja (PB) al piso 16. Haz clic en "Ver Recibos y Pagos" para consultar meses y fotos de comprobantes.
+              Ordenado de Planta Baja (PB) al piso 16 y Penthouse (PH). Haz clic en "Ver Recibos y Pagos" para consultar meses y fotos de comprobantes.
             </p>
           </div>
           <div class="flex items-center gap-2">
@@ -551,39 +551,30 @@ const apartamentosFiltrados = computed(() => {
     })
   }
 
-  // Buscador de texto inteligente (apto, piso, persona, cédula)
+  // Buscador de texto: exclusivamente por número de apartamento o nombre del residente/propietario
   if (filtroTexto.value.trim()) {
     const term = filtroTexto.value.trim().toLowerCase()
     const termSinGuion = term.replace(/[^a-z0-9]/g, '')
+    const termLimpio = term.replace(/^apto\s*/, '')
     lista = lista.filter((a) => {
       const aptoNum = String(a.numero_apto || '').toLowerCase()
       const aptoNumSinGuion = aptoNum.replace(/[^a-z0-9]/g, '')
-      const piso = String(a.piso || '').toLowerCase()
-      const nom = String(a.habitanteNombre || '').toLowerCase()
-      const email = String(a.habitanteEmail || '').toLowerCase()
-      const cedula = String(a.habitanteCedula || '').toLowerCase()
-      const tel = String(a.habitanteTelefono || '').toLowerCase()
+      const nomResidente = String(a.habitanteNombre || '').toLowerCase()
+      const nomPropietario = a.propietario ? `${a.propietario.nombre || ''} ${a.propietario.apellido || ''}`.toLowerCase() : ''
 
-      // Coincidencia con número de apartamento
-      if (aptoNum.includes(term) || (termSinGuion && aptoNumSinGuion.includes(termSinGuion))) return true
-      if (`apto ${aptoNum}`.includes(term)) return true
+      // 1. Coincidencia por número de apartamento
+      const coincideApto =
+        aptoNum.includes(term) ||
+        (termSinGuion && aptoNumSinGuion.includes(termSinGuion)) ||
+        (termLimpio && aptoNum.includes(termLimpio)) ||
+        `apto ${aptoNum}`.includes(term)
 
-      // Coincidencia con piso
-      if (
-        piso === term ||
-        `piso ${piso}`.includes(term) ||
-        (term === 'pb' && (piso === '0' || piso.includes('pb'))) ||
-        (term === 'ph' && (piso === 'ph' || piso.includes('ph'))) ||
-        (term.includes('penthouse') && piso.includes('ph'))
-      ) return true
+      // 2. Coincidencia por nombre de la persona (residente o propietario)
+      const coincideNombre =
+        nomResidente.includes(term) ||
+        (nomPropietario && nomPropietario.includes(term))
 
-      // Coincidencia con persona, email o cédula
-      if (nom.includes(term) || email.includes(term) || cedula.includes(term)) return true
-
-      // Teléfono: solo si el término tiene 4 o más caracteres o inicia con + o 0 (evita falsos positivos con dígitos individuales)
-      if ((term.length >= 4 || term.startsWith('+') || term.startsWith('0')) && tel.includes(term)) return true
-
-      return false
+      return coincideApto || coincideNombre
     })
   }
   return lista
