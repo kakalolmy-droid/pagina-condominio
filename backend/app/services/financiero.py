@@ -73,17 +73,28 @@ def obtener_matriz_deudas(db: Session) -> list[dict]:
     except ValueError:
         tasa_valor = Decimal("0")
 
+    from collections import defaultdict
+
     apartamentos = db.query(Apartamento).all()
+
+    # Traer todos los recibos pendientes en una sola consulta indexada y eficiente (O(1) consultas en vez de O(N))
+    todos_recibos_pend = (
+        db.query(Recibo)
+        .filter(Recibo.estado_pago != "pagado")
+        .order_by(Recibo.mes_periodo.asc())
+        .all()
+    )
+    recibos_por_apto = defaultdict(list)
+    for r in todos_recibos_pend:
+        recibos_por_apto[r.apartamento_id].append(r)
+
     matriz = []
 
     for apto in apartamentos:
         cuota_mensual = float(apto.alicuota or 15.0)
 
-        # Recibos no pagados reales en la base de datos
-        recibos_pend = db.query(Recibo).filter(
-            Recibo.apartamento_id == apto.id,
-            Recibo.estado_pago != "pagado"
-        ).order_by(Recibo.mes_periodo.asc()).all()
+        # Recibos no pagados obtenidos al instante desde el mapeo en memoria
+        recibos_pend = recibos_por_apto.get(apto.id, [])
 
         meses_pend = len(recibos_pend)
         apto.meses_pendientes = meses_pend

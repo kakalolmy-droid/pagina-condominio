@@ -9,13 +9,13 @@ class Usuario(Base):
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(100), nullable=False)
     apellido = Column(String(100), nullable=False)
-    cedula = Column(String(20), unique=True, nullable=False)
-    telefono_whatsapp = Column(String(20), nullable=False)
-    email = Column(String(120), unique=True, nullable=False)
+    cedula = Column(String(20), unique=True, nullable=False, index=True)
+    telefono_whatsapp = Column(String(20), nullable=False, index=True)
+    email = Column(String(120), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
-    rol = Column(String(20), default="propietario")  # admin | junta | propietario
-    activo = Column(Boolean, default=True)  # Si está inactivo, no puede entrar ni recibe notificaciones
-    reset_token = Column(String(10), nullable=True)  # Código OTP temporal para recuperación
+    rol = Column(String(20), default="propietario", index=True)  # admin | junta | propietario
+    activo = Column(Boolean, default=True, index=True)  # Si está inactivo, no puede entrar ni recibe notificaciones
+    reset_token = Column(String(10), nullable=True, index=True)  # Código OTP temporal para recuperación
     reset_token_exp = Column(DateTime, nullable=True)  # Expiración del código OTP (15 min)
     fecha_registro = Column(DateTime, server_default=func.now())
 

@@ -7,14 +7,14 @@ class Apartamento(Base):
     __tablename__ = "apartamentos"
 
     id = Column(Integer, primary_key=True, index=True)
-    numero_apto = Column(String(10), nullable=False)
-    piso = Column(String(5))
+    numero_apto = Column(String(10), nullable=False, index=True)
+    piso = Column(String(5), index=True)
     torre = Column(String(20), default="Principal")
     alicuota = Column(Numeric(10, 2), default=15.00)  # Cuota fija mensual en USD (ej: $15.00)
     meses_pendientes = Column(Integer, default=1)  # Cantidad de meses pendientes de deuda
     saldo_favor_usd = Column(Numeric(10, 2), default=0.00)
-    activo = Column(Boolean, default=True)  # Si está inactivo, no se le envían avisos ni cobra
-    propietario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"))
+    activo = Column(Boolean, default=True, index=True)  # Si está inactivo, no se le envían avisos ni cobra
+    propietario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), index=True)
 
     # Relaciones
     propietario = relationship("Usuario", back_populates="apartamentos")

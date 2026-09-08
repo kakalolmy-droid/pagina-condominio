@@ -36,6 +36,25 @@ def auto_seed_database():
             "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS reset_token VARCHAR(10);",
             "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS reset_token_exp TIMESTAMP;",
             "UPDATE configuracion_condominio SET telefono_whatsapp_emisor = '' WHERE telefono_whatsapp_emisor = '04149998877';",
+            # Índices de alto rendimiento para acelerar consultas y búsquedas
+            "CREATE INDEX IF NOT EXISTS idx_usuarios_telefono ON usuarios(telefono_whatsapp);",
+            "CREATE INDEX IF NOT EXISTS idx_usuarios_activo ON usuarios(activo);",
+            "CREATE INDEX IF NOT EXISTS idx_usuarios_rol ON usuarios(rol);",
+            "CREATE INDEX IF NOT EXISTS idx_usuarios_reset_token ON usuarios(reset_token);",
+            "CREATE INDEX IF NOT EXISTS idx_apartamentos_numero ON apartamentos(numero_apto);",
+            "CREATE INDEX IF NOT EXISTS idx_apartamentos_piso ON apartamentos(piso);",
+            "CREATE INDEX IF NOT EXISTS idx_apartamentos_propietario ON apartamentos(propietario_id);",
+            "CREATE INDEX IF NOT EXISTS idx_apartamentos_activo ON apartamentos(activo);",
+            "CREATE INDEX IF NOT EXISTS idx_recibos_apartamento_id ON recibos(apartamento_id);",
+            "CREATE INDEX IF NOT EXISTS idx_recibos_mes_periodo ON recibos(mes_periodo);",
+            "CREATE INDEX IF NOT EXISTS idx_recibos_estado_pago ON recibos(estado_pago);",
+            "CREATE INDEX IF NOT EXISTS idx_recibo_apto_periodo ON recibos(apartamento_id, mes_periodo);",
+            "CREATE INDEX IF NOT EXISTS idx_recibo_apto_estado ON recibos(apartamento_id, estado_pago);",
+            "CREATE INDEX IF NOT EXISTS idx_pagos_apartamento_id ON pagos(apartamento_id);",
+            "CREATE INDEX IF NOT EXISTS idx_pagos_recibo_id ON pagos(recibo_id);",
+            "CREATE INDEX IF NOT EXISTS idx_pagos_estado_conciliacion ON pagos(estado_conciliacion);",
+            "CREATE INDEX IF NOT EXISTS idx_pagos_referencia ON pagos(referencia_bancaria);",
+            "CREATE INDEX IF NOT EXISTS idx_pagos_fecha_reporte ON pagos(fecha_reporte);",
         ]
         for sql in migraciones:
             try:
