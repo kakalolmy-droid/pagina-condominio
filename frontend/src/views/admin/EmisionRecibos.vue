@@ -1,53 +1,27 @@
 <template>
   <AdminLayout
-    titulo="Gestión de Recibos y Pagos"
-    subtitulo="Control de recibos mensuales por apartamento y residente con fotos de comprobantes de pago"
+    titulo="Recibos por Apartamento y Residentes"
+    subtitulo="Control de cuotas mensuales, solvencia y comprobantes de pago organizados por apartamento (PB al 16)"
   >
-    <!-- Selector Neumórfico de Pestaña: Vista por Apartamentos (PB al 16) vs Vista de Recibos Sueltos -->
-    <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 mb-6">
-      <div class="inline-flex rounded-neu bg-neu-bg-dark p-1.5 border border-neu-shadow-dark gap-1 shadow-neu-inset">
-        <button
-          type="button"
-          @click="modoVista = 'apartamentos'"
-          class="py-2.5 px-4 text-xs font-bold rounded-neu-sm transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"
-          :class="modoVista === 'apartamentos'
-            ? 'bg-neu-bg shadow-neu-sm text-neu-green font-extrabold'
-            : 'text-neu-text-light hover:text-neu-text'"
-        >
-          <span>🏢</span>
-          <span>Por Apartamentos y Residentes (PB al 16)</span>
-        </button>
-        <button
-          type="button"
-          @click="modoVista = 'recibos'"
-          class="py-2.5 px-4 text-xs font-bold rounded-neu-sm transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"
-          :class="modoVista === 'recibos'
-            ? 'bg-neu-bg shadow-neu-sm text-neu-green font-extrabold'
-            : 'text-neu-text-light hover:text-neu-text'"
-        >
-          <span>📄</span>
-          <span>Lista General de Recibos</span>
-        </button>
+    <!-- Barra de Búsqueda y Filtros con Simetría y Mayor Espacio -->
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
+      <div class="relative w-full sm:w-80 md:w-96">
+        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neu-text-light text-xs">
+          🔍
+        </span>
+        <input
+          v-model="filtroTexto"
+          type="text"
+          placeholder="Buscar por apartamento, residente o teléfono..."
+          class="input-neu text-xs py-2.5 pl-9 pr-3 w-full"
+        />
       </div>
 
-      <!-- Barra de Búsqueda y Filtros con Simetría y Altura Homogénea -->
       <div class="flex items-center gap-3 flex-wrap sm:flex-nowrap justify-end">
-        <div class="relative w-full sm:w-60">
-          <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neu-text-light text-xs">
-            🔍
-          </span>
-          <input
-            v-model="filtroTexto"
-            type="text"
-            placeholder="Buscar por apto, piso o persona..."
-            class="input-neu text-xs py-2.5 pl-8 pr-3 w-full"
-          />
-        </div>
-
         <!-- Filtro por Pisos del Edificio (PB al Piso 16 y PH) -->
         <select
           v-model="filtroPiso"
-          class="input-neu text-xs py-2.5 px-3 min-w-[140px] cursor-pointer"
+          class="input-neu text-xs py-2.5 px-3 min-w-[150px] cursor-pointer"
           title="Filtrar por piso del edificio"
         >
           <option value="todos">🏢 Todos los Pisos</option>
@@ -58,36 +32,25 @@
           <option value="PH">Penthouse (PH)</option>
         </select>
 
+        <!-- Filtro por Solvencia -->
         <select
-          v-if="modoVista === 'apartamentos'"
           v-model="filtroEstadoApto"
           class="input-neu text-xs py-2.5 px-3 min-w-[160px] cursor-pointer"
         >
           <option value="todos">Todos los Estados</option>
-          <option value="morosos">Solo con Saldo Pendiente</option>
+          <option value="morosos">Solo con Deuda (Morosos)</option>
           <option value="solventes">Solo Solventes (Al día)</option>
-        </select>
-
-        <select
-          v-else
-          v-model="filtroEstadoRecibo"
-          class="input-neu text-xs py-2.5 px-3 min-w-[150px] cursor-pointer"
-        >
-          <option value="">Todos los Estados</option>
-          <option value="pendiente">Pendientes</option>
-          <option value="parcial">Parciales</option>
-          <option value="pagado">Pagados</option>
         </select>
       </div>
     </div>
 
-    <!-- ──────────────── VISTA 1: POR APARTAMENTOS Y RESIDENTES (ORDENADOS PB AL 16) ──────────────── -->
-    <div v-if="modoVista === 'apartamentos'">
+    <!-- ──────────────── VISTA PRINCIPAL: POR APARTAMENTOS Y RESIDENTES (PB AL 16) ──────────────── -->
+    <div>
       <NeuCard>
         <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3.5 mb-3 border-b border-neu-shadow-dark/40 gap-2">
           <div>
             <h3 class="text-base font-bold text-neu-green flex items-center gap-2">
-              <span>🏢</span> Control de Inmuebles y Residentes
+              <span>🏢</span> Control por Apartamentos y Residentes
             </h3>
             <p class="text-xs text-neu-text-light mt-0.5">
               Ordenado de Planta Baja (PB) al piso 16. Haz clic en "Ver Recibos y Pagos" para consultar meses y fotos de comprobantes.
@@ -95,7 +58,7 @@
           </div>
           <div class="flex items-center gap-2">
             <span class="px-3 py-1 rounded-full bg-neu-bg shadow-neu-sm text-xs font-bold text-neu-text-light border border-white/60 whitespace-nowrap">
-              Total: <strong class="text-neu-green font-extrabold">{{ apartamentosFiltrados.length }}</strong> inmuebles
+              Total: <strong class="text-neu-green font-extrabold">{{ apartamentosFiltrados.length }}</strong> apartamentos
             </span>
           </div>
         </div>
@@ -104,12 +67,11 @@
           <table class="w-full text-left border-collapse">
             <thead>
               <tr class="border-b border-neu-shadow-dark text-neu-text-light text-[11px] uppercase tracking-wider">
-                <th class="py-3 px-3.5 font-bold text-left whitespace-nowrap">Inmueble</th>
-                <th class="py-3 px-3.5 font-bold text-left whitespace-nowrap">Persona que Habita</th>
+                <th class="py-3 px-3.5 font-bold text-left whitespace-nowrap">Apartamento</th>
+                <th class="py-3 px-3.5 font-bold text-left whitespace-nowrap">Residente</th>
                 <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Cuota Fijada</th>
                 <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Recibos</th>
-                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Deuda ($ USD)</th>
-                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Deuda en Bs.</th>
+                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Total Deuda</th>
                 <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Estado</th>
                 <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Expediente</th>
               </tr>
@@ -172,7 +134,7 @@
                 <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
                   <div class="flex items-center justify-center">
                     <span
-                      class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap min-w-[125px] shadow-sm"
+                      class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap min-w-[120px] shadow-sm"
                       :class="apto.totalPendientes > 0 ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'"
                     >
                       <span>{{ apto.totalPendientes > 0 ? '⚠️' : '✓' }}</span>
@@ -181,24 +143,20 @@
                   </div>
                 </td>
 
-                <!-- Deuda Total USD -->
+                <!-- Total Deuda (USD y Bs. juntos para evitar desborde horizontal) -->
                 <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
                   <span
-                    class="font-extrabold text-xs sm:text-sm"
+                    class="font-extrabold text-xs sm:text-sm block"
                     :class="apto.totalDeudaUSD > 0 ? 'text-neu-danger' : 'text-neu-success'"
                   >
                     {{ formatUSD(apto.totalDeudaUSD) }}
                   </span>
-                </td>
-
-                <!-- Deuda Equivalente en VES -->
-                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
-                  <span class="text-xs text-neu-text-light font-semibold">
+                  <span class="text-[11px] text-neu-text-light font-medium block mt-0.5">
                     {{ formatVES(apto.totalDeudaVES) }}
                   </span>
                 </td>
 
-                <!-- Estado (Simetría Absoluta) -->
+                <!-- Estado (Solvente / Moroso) -->
                 <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
                   <div class="flex items-center justify-center">
                     <span
@@ -228,122 +186,10 @@
               </tr>
 
               <tr v-if="apartamentosFiltrados.length === 0">
-                <td colspan="8" class="py-12 text-center text-neu-text-light">
+                <td colspan="7" class="py-12 text-center text-neu-text-light">
                   <div class="flex flex-col items-center justify-center gap-2">
                     <span class="text-2xl">🔍</span>
                     <p class="text-sm">No se encontraron apartamentos con los filtros seleccionados.</p>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </NeuCard>
-    </div>
-
-    <!-- ──────────────── VISTA 2: LISTA GENERAL DE RECIBOS SUELTOS ──────────────── -->
-    <div v-else>
-      <NeuCard>
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3.5 mb-3 border-b border-neu-shadow-dark/40 gap-2">
-          <div>
-            <h3 class="text-base font-bold text-neu-green flex items-center gap-2">
-              <span>📄</span> Lista General de Recibos
-            </h3>
-            <p class="text-xs text-neu-text-light mt-0.5">
-              Histórico cronológico de todos los recibos emitidos en el condominio.
-            </p>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="px-3 py-1 rounded-full bg-neu-bg shadow-neu-sm text-xs font-bold text-neu-text-light border border-white/60 whitespace-nowrap">
-              Total: <strong class="text-neu-green font-extrabold">{{ recibosFiltradosGeneral.length }}</strong> recibos
-            </span>
-          </div>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse">
-            <thead>
-              <tr class="border-b border-neu-shadow-dark text-neu-text-light text-[11px] uppercase tracking-wider">
-                <th class="py-3 px-3.5 font-bold text-left whitespace-nowrap">Período</th>
-                <th class="py-3 px-3.5 font-bold text-left whitespace-nowrap">Apartamento</th>
-                <th class="py-3 px-3.5 font-bold text-left whitespace-nowrap">Residente</th>
-                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Monto Total</th>
-                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Monto Pendiente</th>
-                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Vencimiento</th>
-                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Estado</th>
-                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Comprobante</th>
-                <th class="py-3 px-3.5 font-bold text-center whitespace-nowrap">Acción</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-neu-bg-dark">
-              <tr
-                v-for="recibo in recibosFiltradosGeneral"
-                :key="recibo.id"
-                class="hover:bg-neu-bg-dark/40 transition-colors"
-              >
-                <td class="py-3.5 px-3.5 align-middle font-bold text-neu-green whitespace-nowrap">
-                  {{ formatPeriodo(recibo.mes_periodo) }}
-                </td>
-                <td class="py-3.5 px-3.5 align-middle whitespace-nowrap">
-                  <span class="px-2.5 py-1 rounded-neu-sm bg-neu-bg shadow-neu-sm font-extrabold text-neu-green text-xs border border-white/60">
-                    🏢 Apto {{ obtenerNumeroApto(recibo.apartamento_id) }}
-                  </span>
-                </td>
-                <td class="py-3.5 px-3.5 align-middle">
-                  <span class="font-bold text-neu-text text-xs sm:text-sm block truncate max-w-[180px]">
-                    {{ obtenerNombreHabitantePorAptoId(recibo.apartamento_id) }}
-                  </span>
-                  <span v-if="obtenerTelefonoHabitantePorAptoId(recibo.apartamento_id)" class="text-[11px] text-neu-text font-mono font-bold block mt-0.5">
-                    📱 {{ obtenerTelefonoHabitantePorAptoId(recibo.apartamento_id) }}
-                  </span>
-                </td>
-                <td class="py-3.5 px-3.5 align-middle text-center font-bold text-neu-text text-xs sm:text-sm whitespace-nowrap">
-                  {{ formatUSD(recibo.monto_total_usd) }}
-                </td>
-                <td class="py-3.5 px-3.5 align-middle text-center font-extrabold text-xs sm:text-sm whitespace-nowrap" :class="recibo.monto_pendiente_usd > 0 ? 'text-neu-danger' : 'text-neu-success'">
-                  {{ formatUSD(recibo.monto_pendiente_usd) }}
-                </td>
-                <td class="py-3.5 px-3.5 align-middle text-center text-neu-text-light text-xs whitespace-nowrap font-medium">
-                  {{ formatFecha(recibo.fecha_vencimiento) }}
-                </td>
-                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
-                  <div class="flex items-center justify-center">
-                    <EstadoPagoBadge :estado="recibo.estado_pago" />
-                  </div>
-                </td>
-                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
-                  <div class="flex items-center justify-center">
-                    <button
-                      v-if="recibo.comprobante_url"
-                      type="button"
-                      @click="verFotoComprobante(recibo)"
-                      class="px-3 py-1.5 rounded-neu-sm text-xs font-bold text-neu-green bg-neu-bg shadow-neu-sm hover:shadow-neu-inset border border-white/60 transition-all cursor-pointer inline-flex items-center gap-1 whitespace-nowrap"
-                      title="Ver foto del comprobante enviado"
-                    >
-                      <span>📷</span>
-                      <span>Ver Captura</span>
-                    </button>
-                    <span v-else class="text-xs text-neu-text-light italic font-medium">—</span>
-                  </div>
-                </td>
-                <td class="py-3.5 px-3.5 align-middle text-center whitespace-nowrap">
-                  <div class="flex items-center justify-center">
-                    <button
-                      type="button"
-                      @click="confirmarEliminarRecibo(recibo)"
-                      class="p-2 rounded-neu-sm text-neu-danger hover:text-red-600 hover:bg-rose-50 transition-all cursor-pointer"
-                      title="Eliminar este recibo"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </td>
-              </tr>
-              <tr v-if="recibosFiltradosGeneral.length === 0">
-                <td colspan="9" class="py-12 text-center text-neu-text-light">
-                  <div class="flex flex-col items-center justify-center gap-2">
-                    <span class="text-2xl">📄</span>
-                    <p class="text-sm">No hay recibos generados para este filtro.</p>
                   </div>
                 </td>
               </tr>
@@ -411,7 +257,6 @@
                 <th class="py-2.5 px-3 font-bold text-center whitespace-nowrap">Vencimiento</th>
                 <th class="py-2.5 px-3 font-bold text-center whitespace-nowrap">Estado</th>
                 <th class="py-2.5 px-3 font-bold text-center whitespace-nowrap">Comprobante de Pago</th>
-                <th class="py-2.5 px-3 font-bold text-center whitespace-nowrap">Acción</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-neu-bg-dark">
@@ -466,24 +311,10 @@
                     Sin comprobante
                   </div>
                 </td>
-
-                <!-- Acción: Eliminar -->
-                <td class="py-3 px-3 align-middle text-center whitespace-nowrap">
-                  <div class="flex items-center justify-center">
-                    <button
-                      type="button"
-                      @click="confirmarEliminarRecibo(recibo)"
-                      class="p-2 rounded-neu-sm text-neu-danger hover:bg-rose-50 transition-all cursor-pointer"
-                      title="Eliminar este recibo"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </td>
               </tr>
 
               <tr v-if="!aptoSeleccionado.recibos || aptoSeleccionado.recibos.length === 0">
-                <td colspan="7" class="py-10 text-center text-neu-text-light">
+                <td colspan="6" class="py-10 text-center text-neu-text-light">
                   <div class="flex flex-col items-center justify-center gap-2">
                     <span class="text-2xl">📂</span>
                     <p class="text-sm">No hay recibos generados aún para este apartamento.</p>
@@ -584,11 +415,9 @@ const aptosStore = useApartamentosStore()
 const tasaStore = useTasaStore()
 const usuariosStore = useUsuariosStore()
 
-const modoVista = ref('apartamentos') // 'apartamentos' | 'recibos'
 const filtroTexto = ref('')
 const filtroPiso = ref('todos') // 'todos' | 'PB' | '1' ... '16'
 const filtroEstadoApto = ref('todos') // 'todos' | 'morosos' | 'solventes'
-const filtroEstadoRecibo = ref('')
 
 const pisosDisponibles = computed(() => Array.from({ length: 16 }, (_, i) => String(i + 1)))
 
@@ -760,55 +589,6 @@ const apartamentosFiltrados = computed(() => {
   return lista
 })
 
-const recibosFiltradosGeneral = computed(() => {
-  let lista = recibosStore.lista || []
-  if (filtroEstadoRecibo.value) {
-    lista = lista.filter((r) => r.estado_pago === filtroEstadoRecibo.value)
-  }
-
-  // Filtro por Piso en recibos (PB al 16 y PH)
-  if (filtroPiso.value !== 'todos') {
-    const target = filtroPiso.value.trim().toUpperCase()
-    lista = lista.filter((r) => {
-      const apto = aptosStore.lista.find((a) => a.id === r.apartamento_id)
-      if (!apto) return false
-      const p = String(apto.piso || '').trim().toUpperCase()
-      if (target === 'PB') return p === 'PB' || p === '0'
-      if (target === 'PH') return p === 'PH' || p.includes('PH') || p.includes('PENTHOUSE')
-      return p === target
-    })
-  }
-
-  if (filtroTexto.value.trim()) {
-    const term = filtroTexto.value.trim().toLowerCase()
-    const termSinGuion = term.replace(/[^a-z0-9]/g, '')
-    lista = lista.filter((r) => {
-      const apto = aptosStore.lista.find((a) => a.id === r.apartamento_id)
-      const aptoNum = String(apto?.numero_apto || obtenerNumeroApto(r.apartamento_id)).toLowerCase()
-      const aptoNumSinGuion = aptoNum.replace(/[^a-z0-9]/g, '')
-      const piso = String(apto?.piso || '').toLowerCase()
-      const nom = obtenerNombreHabitantePorAptoId(r.apartamento_id).toLowerCase()
-      const tel = obtenerTelefonoHabitantePorAptoId(r.apartamento_id).toLowerCase()
-      const per = String(r.mes_periodo || '').toLowerCase()
-
-      if (aptoNum.includes(term) || (termSinGuion && aptoNumSinGuion.includes(termSinGuion))) return true
-      if (`apto ${aptoNum}`.includes(term)) return true
-      if (
-        piso === term ||
-        `piso ${piso}`.includes(term) ||
-        (term === 'pb' && (piso === '0' || piso.includes('pb'))) ||
-        (term === 'ph' && (piso === 'ph' || piso.includes('ph'))) ||
-        (term.includes('penthouse') && piso.includes('ph'))
-      ) return true
-      if (nom.includes(term) || per.includes(term)) return true
-      if ((term.length >= 4 || term.startsWith('+') || term.startsWith('0')) && tel.includes(term)) return true
-
-      return false
-    })
-  }
-  return lista
-})
-
 function obtenerNumeroApto(aptoId) {
   const apto = aptosStore.lista.find((a) => a.id === aptoId)
   return apto ? apto.numero_apto : `#${aptoId}`
@@ -846,33 +626,5 @@ function esPdf(url) {
 function verFotoComprobante(recibo) {
   reciboParaComprobante.value = recibo
   modalFotoComprobanteAbierto.value = true
-}
-
-async function confirmarEliminarRecibo(recibo) {
-  const aptoNum = obtenerNumeroApto(recibo.apartamento_id)
-  const periodoStr = formatPeriodo(recibo.mes_periodo)
-  if (!confirm(`¿Estás seguro de eliminar el recibo de ${periodoStr} para el Apto ${aptoNum}?\n\nEsta acción recalculará automáticamente la deuda pendiente y los meses adeudados del apartamento.`)) {
-    return
-  }
-
-  try {
-    await recibosStore.eliminar(recibo.id)
-    await Promise.all([
-      recibosStore.cargar(),
-      aptosStore.cargar(),
-    ])
-
-    // Actualizar el expediente abierto si coincide
-    if (aptoSeleccionado.value) {
-      const actualizado = apartamentosConRecibos.value.find((a) => a.id === aptoSeleccionado.value.id)
-      if (actualizado) {
-        aptoSeleccionado.value = actualizado
-      }
-    }
-
-    toast.success('Recibo eliminado y deuda sincronizada correctamente.')
-  } catch (error) {
-    toast.error(error.response?.data?.detail || 'Error al eliminar el recibo')
-  }
 }
 </script>
